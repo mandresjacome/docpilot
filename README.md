@@ -246,4 +246,4 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE).
 
 ## Autor
 
-**Mario Andrés Jácome** — [@mandresjacome](https://github.com/mandresjacome)
+**Mario Andrés Jácome Mantilla** — [@mandresjacome](https://github.com/mandresjacome)
