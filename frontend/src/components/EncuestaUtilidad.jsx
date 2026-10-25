@@ -148,15 +148,15 @@ const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
         Tu opinión ayuda a mejorar el sistema. La encuesta es completamente voluntaria.
       </p>
 
-      {/* ── Código de documento (piloto de validación) ── */}
-      {/* Campo opcional para identificar el documento en la ficha de evaluación del banco documental.
+      {/* ── Código de documento (identificador opcional) ── */}
+      {/* Campo opcional para identificar el documento en una ficha de evaluación externa.
           Se pre-llena con el prefijo del tipo detectado. Formato: COT-R-001, FAC-S-002, etc.
           El código se guarda al inicio del comentario entre corchetes para no requerir
-          cambios de esquema en Supabase mientras el panel administrativo no esté accesible. */}
+          cambios de esquema en Supabase. */}
       <div className="comentario-container">
         <label htmlFor="codigo-documento" className="pregunta-encuesta">
           Código del documento{' '}
-          <span className="texto-opcional">(piloto — ej: COT-R-001, FAC-S-002)</span>
+          <span className="texto-opcional">(opcional — ej: COT-R-001, FAC-S-002)</span>
         </label>
         <input
           id="codigo-documento"

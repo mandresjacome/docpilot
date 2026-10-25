@@ -5,19 +5,19 @@
 
 /* Variables de diseño — Paleta DocPilot */
 :root {
-  --uts-verde:         #0d9e6e;   /* Verde esmeralda — acción principal */
-  --uts-verde-oscuro:  #0a8059;   /* Verde esmeralda oscuro para hover */
-  --uts-verde-claro:   #e6f7f2;   /* Verde esmeralda suave para fondos */
-  --uts-verde-borde:   #6ecdb3;   /* Verde esmeralda para bordes sutiles */
-  --uts-oscuro:        #1e293b;   /* Azul oscuro para texto principal */
-  --uts-gris-medio:    #475569;   /* Gris medio para texto secundario */
-  --uts-gris-claro:    #94a3b8;   /* Gris claro para etiquetas y placeholders */
-  --uts-borde:         #e2e8f0;   /* Borde de tarjetas y separadores */
-  --uts-fondo:         #eef2f7;   /* Fondo general — gris azulado suave para contrastar con header/footer blanco */
-  --uts-blanco:        #ffffff;
-  --uts-error:         #dc2626;
-  --uts-error-fondo:   #fee2e2;
-  --uts-error-borde:   #fca5a5;
+  --dp-verde:         #0d9e6e;   /* Verde esmeralda — acción principal */
+  --dp-verde-oscuro:  #0a8059;   /* Verde esmeralda oscuro para hover */
+  --dp-verde-claro:   #e6f7f2;   /* Verde esmeralda suave para fondos */
+  --dp-verde-borde:   #6ecdb3;   /* Verde esmeralda para bordes sutiles */
+  --dp-oscuro:        #1e293b;   /* Azul oscuro para texto principal */
+  --dp-gris-medio:    #475569;   /* Gris medio para texto secundario */
+  --dp-gris-claro:    #94a3b8;   /* Gris claro para etiquetas y placeholders */
+  --dp-borde:         #e2e8f0;   /* Borde de tarjetas y separadores */
+  --dp-fondo:         #eef2f7;   /* Fondo general — gris azulado suave para contrastar con header/footer blanco */
+  --dp-blanco:        #ffffff;
+  --dp-error:         #dc2626;
+  --dp-error-fondo:   #fee2e2;
+  --dp-error-borde:   #fca5a5;
   --app-azul:          #1a4f8a;   /* Azul profundo — header y elementos de marca */
   --app-azul-oscuro:   #163d6e;   /* Azul profundo oscuro para hover */
 }
@@ -30,8 +30,8 @@
 
 body {
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  background-color: var(--uts-fondo);
-  color: var(--uts-oscuro);
+  background-color: var(--dp-fondo);
+  color: var(--dp-oscuro);
   line-height: 1.6;
 }
 
@@ -42,11 +42,11 @@ body {
   flex-direction: column;
 }
 
-/* ── Cabecera MiDocIA — fondo blanco para que el logo PNG se vea correctamente ── */
+/* ── Cabecera DocPilot — fondo blanco para que el logo PNG se vea correctamente ── */
 .app-header {
-  background-color: var(--uts-blanco);
-  /* Borde inferior esmeralda — acento de identidad MiDocIA */
-  border-bottom: 4px solid var(--uts-verde);
+  background-color: var(--dp-blanco);
+  /* Borde inferior esmeralda — acento de identidad DocPilot */
+  border-bottom: 4px solid var(--dp-verde);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   padding: 0 2rem;
   position: sticky;
@@ -69,8 +69,8 @@ body {
   gap: 1rem;
 }
 
-/* Logo MiDocIA — PNG sin fondo sobre header blanco, se ve correctamente */
-.logo-uts-img {
+/* Logo DocPilot — PNG sin fondo sobre header blanco, se ve correctamente */
+.logo-img {
   height: 40px;
   width: auto;
   display: block;
@@ -80,7 +80,7 @@ body {
 .header-divisor {
   width: 2px;
   height: 32px;
-  background-color: var(--uts-borde);
+  background-color: var(--dp-borde);
   border-radius: 1px;
 }
 
@@ -98,7 +98,7 @@ body {
 
 .header-titulo-sub {
   font-size: 0.72rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.3;
 }
 
@@ -106,9 +106,9 @@ body {
 .header-badge {
   font-size: 0.72rem;
   font-weight: 700;
-  background-color: var(--uts-verde-claro);
+  background-color: var(--dp-verde-claro);
   color: #0a6647;
-  border: 1px solid var(--uts-verde-borde);
+  border: 1px solid var(--dp-verde-borde);
   padding: 0.3rem 0.85rem;
   border-radius: 20px;
   letter-spacing: 0.02em;
@@ -140,25 +140,25 @@ main {
 h1 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.3rem;
 }
 
 /* Subtítulo descriptivo debajo del h1 */
 .subtitulo-pagina {
   font-size: 0.9rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   margin-bottom: 1.75rem;
   padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--uts-borde);
+  border-bottom: 1px solid var(--dp-borde);
 }
 
 h2 {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 1rem;
-  /* Acento verde a la izquierda — igual al portal UTS */
+  /* Acento verde a la izquierda de cada título de sección */
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -169,27 +169,27 @@ h2::before {
   display: inline-block;
   width: 4px;
   height: 1rem;
-  background-color: var(--uts-verde);
+  background-color: var(--dp-verde);
   border-radius: 2px;
   flex-shrink: 0;
 }
 
 /* ── Tarjeta genérica ── */
 .card {
-  background: var(--uts-blanco);
+  background: var(--dp-blanco);
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
   margin-bottom: 1.5rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
 }
 
 /* ── Zona de carga del archivo ── */
 .zona-archivo {
-  border: 2px dashed var(--uts-borde);
+  border: 2px dashed var(--dp-borde);
   border-radius: 8px;
   padding: 1.25rem 1rem;
-  background: var(--uts-fondo);
+  background: var(--dp-fondo);
   transition: border-color 0.2s, background-color 0.2s;
   margin-bottom: 1rem;
   display: flex;
@@ -199,8 +199,8 @@ h2::before {
 }
 
 .zona-archivo:hover {
-  border-color: var(--uts-verde);
-  background-color: var(--uts-verde-claro);
+  border-color: var(--dp-verde);
+  background-color: var(--dp-verde-claro);
 }
 
 /* Ocultar el input nativo del navegador — el label actúa como su reemplazo */
@@ -217,9 +217,9 @@ h2::before {
 /* Botón "Seleccionar archivo" en español — imita visualmente un botón secundario */
 .btn-elegir-archivo {
   display: inline-block;
-  background-color: var(--uts-blanco);
-  color: var(--uts-oscuro);
-  border: 1.5px solid var(--uts-borde);
+  background-color: var(--dp-blanco);
+  color: var(--dp-oscuro);
+  border: 1.5px solid var(--dp-borde);
   padding: 0.45rem 1rem;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -231,14 +231,14 @@ h2::before {
 }
 
 .btn-elegir-archivo:hover {
-  border-color: var(--uts-verde);
-  background-color: var(--uts-verde-claro);
+  border-color: var(--dp-verde);
+  background-color: var(--dp-verde-claro);
 }
 
 /* Texto con el nombre del archivo o "Ningún archivo seleccionado" */
 .nombre-archivo {
   font-size: 0.85rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -248,7 +248,7 @@ h2::before {
 
 .zona-archivo-info {
   font-size: 0.78rem;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   width: 100%;
   margin-top: 0.25rem;
 }
@@ -259,7 +259,7 @@ h2::before {
   margin-bottom: 0.5rem;
   font-weight: 500;
   font-size: 0.875rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
 }
 
 .input-archivo {
@@ -269,8 +269,8 @@ h2::before {
 
 /* ── Botón principal (Analizar) ── */
 .btn-primario {
-  background-color: var(--uts-verde);
-  color: var(--uts-oscuro);
+  background-color: var(--dp-verde);
+  color: var(--dp-oscuro);
   border: none;
   padding: 0.65rem 1.6rem;
   border-radius: 8px;
@@ -282,7 +282,7 @@ h2::before {
 }
 
 .btn-primario:hover:not(:disabled) {
-  background-color: var(--uts-verde-oscuro);
+  background-color: var(--dp-verde-oscuro);
 }
 
 .btn-primario:active:not(:disabled) {
@@ -290,16 +290,16 @@ h2::before {
 }
 
 .btn-primario:disabled {
-  background-color: var(--uts-verde-claro);
+  background-color: var(--dp-verde-claro);
   color: #6b7280;
   cursor: not-allowed;
 }
 
 /* ── Botón de confirmación HITL ── */
 .btn-confirmar {
-  background-color: var(--uts-oscuro);
-  color: var(--uts-blanco);
-  border: 2px solid var(--uts-oscuro);
+  background-color: var(--dp-oscuro);
+  color: var(--dp-blanco);
+  border: 2px solid var(--dp-oscuro);
   padding: 0.65rem 1.6rem;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -312,9 +312,9 @@ h2::before {
 }
 
 .btn-confirmar:hover:not(:disabled) {
-  background-color: var(--uts-verde);
-  border-color: var(--uts-verde);
-  color: var(--uts-oscuro);
+  background-color: var(--dp-verde);
+  border-color: var(--dp-verde);
+  color: var(--dp-oscuro);
 }
 
 .btn-confirmar:disabled {
@@ -324,9 +324,9 @@ h2::before {
 
 /* ── Mensajes de estado ── */
 .alerta-error {
-  background-color: var(--uts-error-fondo);
-  color: var(--uts-error);
-  border: 1px solid var(--uts-error-borde);
+  background-color: var(--dp-error-fondo);
+  color: var(--dp-error);
+  border: 1px solid var(--dp-error-borde);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
@@ -345,9 +345,9 @@ h2::before {
 }
 
 .alerta-exito {
-  background-color: var(--uts-verde-claro);
+  background-color: var(--dp-verde-claro);
   color: #3d6e06;
-  border: 1px solid var(--uts-verde-borde);
+  border: 1px solid var(--dp-verde-borde);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
@@ -365,8 +365,8 @@ h2::before {
 
 /* Botón para volver a analizar otro documento tras confirmar */
 .btn-nuevo-documento {
-  background-color: var(--uts-oscuro);
-  color: var(--uts-blanco);
+  background-color: var(--dp-oscuro);
+  color: var(--dp-blanco);
   border: none;
   padding: 0.5rem 1.1rem;
   border-radius: 6px;
@@ -379,12 +379,12 @@ h2::before {
 }
 
 .btn-nuevo-documento:hover {
-  background-color: var(--uts-verde-oscuro);
+  background-color: var(--dp-verde-oscuro);
 }
 
 /* ── Spinner de carga con animación ── */
 .spinner-texto {
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   font-size: 0.92rem;
   margin: 1rem 0;
   display: flex;
@@ -392,14 +392,14 @@ h2::before {
   gap: 0.6rem;
 }
 
-/* Círculo giratorio esmeralda MiDocIA */
+/* Círculo giratorio esmeralda DocPilot */
 .spinner-texto::before {
   content: '';
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2.5px solid var(--uts-verde-claro);
-  border-top-color: var(--uts-verde);
+  border: 2.5px solid var(--dp-verde-claro);
+  border-top-color: var(--dp-verde);
   border-radius: 50%;
   animation: girar 0.75s linear infinite;
   flex-shrink: 0;
@@ -411,24 +411,24 @@ h2::before {
 
 /* ── Ficha de resultado individual ── */
 .ficha-resultado {
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
-  background: var(--uts-blanco);
+  background: var(--dp-blanco);
 }
 
 .ficha-resultado h3 {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   margin-bottom: 0.5rem;
   font-weight: 700;
 }
 
 .ficha-resultado p {
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   white-space: pre-wrap;
   font-size: 0.92rem;
   line-height: 1.75;
@@ -437,22 +437,22 @@ h2::before {
 /* Indicador de tiempo de procesamiento — aparece bajo el título del análisis */
 .tiempo-analisis {
   font-size: 0.82rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   margin: -0.5rem 0 1rem 0;
 }
 
-/* Badge tipo de documento — verde esmeralda MiDocIA */
+/* Badge tipo de documento — verde esmeralda DocPilot */
 .badge-tipo {
   display: inline-flex;
   align-items: center;
-  background-color: var(--uts-verde-claro);
+  background-color: var(--dp-verde-claro);
   color: #3d6e06;
   border-radius: 20px;
   padding: 0.3rem 1rem;
   font-size: 0.88rem;
   font-weight: 700;
   text-transform: capitalize;
-  border: 1px solid var(--uts-verde-borde);
+  border: 1px solid var(--dp-verde-borde);
 }
 
 /* Ficha de alerta urgente — amarillo para fechas críticas */
@@ -482,7 +482,7 @@ h2::before {
   grid-template-columns: 38% 1fr;
   gap: 0.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--uts-borde);
+  border-bottom: 1px solid var(--dp-borde);
 }
 
 .dato-item:last-child {
@@ -493,14 +493,14 @@ h2::before {
 .dato-item dt {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding-top: 0.1rem;
 }
 
 .dato-item dd {
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   white-space: pre-wrap;
   word-break: break-word;
   font-size: 0.88rem;
@@ -511,8 +511,8 @@ h2::before {
   font-size: 0.7rem;
   font-weight: 600;
   color: #3d6e06;
-  background: var(--uts-verde-claro);
-  border: 1px solid var(--uts-verde-borde);
+  background: var(--dp-verde-claro);
+  border: 1px solid var(--dp-verde-borde);
   border-radius: 10px;
   padding: 0.15rem 0.55rem;
   margin-left: 0.4rem;
@@ -521,10 +521,10 @@ h2::before {
   vertical-align: middle;
 }
 
-/* ── Footer MiDocIA — espeja el estilo de la barra de navegación ── */
+/* ── Footer DocPilot — espeja el estilo de la barra de navegación ── */
 .app-footer {
   background-color: var(--app-azul);
-  border-top: 3px solid var(--uts-verde);
+  border-top: 3px solid var(--dp-verde);
   padding: 1.25rem 2rem;
   text-align: center;
 }
@@ -550,7 +550,7 @@ h2::before {
 
 .footer-autor {
   font-size: 0.75rem;
-  color: var(--uts-verde);
+  color: var(--dp-verde);
   font-weight: 600;
 }
 
@@ -649,7 +649,7 @@ h2::before {
 }
 
 .modal-contenido {
-  background: var(--uts-blanco);
+  background: var(--dp-blanco);
   border-radius: 16px;
   padding: 2rem;
   width: 100%;
@@ -657,7 +657,7 @@ h2::before {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
 }
 
 .modal-encabezado {
@@ -673,7 +673,7 @@ h2::before {
 
 .modal-encabezado h2 {
   font-size: 1.1rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.5rem;
 }
 
@@ -684,18 +684,18 @@ h2::before {
 
 .modal-subtitulo {
   font-size: 0.85rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.5;
 }
 
 .modal-politica {
-  background-color: var(--uts-fondo);
-  border: 1px solid var(--uts-borde);
+  background-color: var(--dp-fondo);
+  border: 1px solid var(--dp-borde);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.25rem;
   font-size: 0.84rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.65;
 }
 
@@ -707,30 +707,30 @@ h2::before {
   display: block;
   font-size: 0.84rem;
   font-weight: 600;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.4rem;
 }
 
 .modal-input {
   width: 100%;
-  border: 1.5px solid var(--uts-borde);
+  border: 1.5px solid var(--dp-borde);
   border-radius: 8px;
   padding: 0.6rem 0.85rem;
   font-size: 0.9rem;
-  color: var(--uts-oscuro);
-  background: var(--uts-blanco);
+  color: var(--dp-oscuro);
+  background: var(--dp-blanco);
   transition: border-color 0.2s;
   outline: none;
 }
 
 .modal-input:focus {
-  border-color: var(--uts-verde);
+  border-color: var(--dp-verde);
   box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
 }
 
 .modal-input:disabled {
-  background: var(--uts-fondo);
-  color: var(--uts-gris-claro);
+  background: var(--dp-fondo);
+  color: var(--dp-gris-claro);
 }
 
 .modal-checkbox-label {
@@ -738,7 +738,7 @@ h2::before {
   align-items: flex-start;
   gap: 0.65rem;
   font-size: 0.85rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   line-height: 1.5;
   cursor: pointer;
   margin-bottom: 1.1rem;
@@ -747,7 +747,7 @@ h2::before {
 .modal-checkbox {
   width: 16px;
   height: 16px;
-  accent-color: var(--uts-verde);
+  accent-color: var(--dp-verde);
   flex-shrink: 0;
   margin-top: 0.15rem;
   cursor: pointer;
@@ -761,8 +761,8 @@ h2::before {
 
 .btn-modal-saltar {
   background: none;
-  border: 1.5px solid var(--uts-borde);
-  color: var(--uts-gris-medio);
+  border: 1.5px solid var(--dp-borde);
+  color: var(--dp-gris-medio);
   padding: 0.55rem 1.4rem;
   border-radius: 8px;
   font-size: 0.85rem;
@@ -773,8 +773,8 @@ h2::before {
 }
 
 .btn-modal-saltar:hover:not(:disabled) {
-  border-color: var(--uts-gris-medio);
-  color: var(--uts-oscuro);
+  border-color: var(--dp-gris-medio);
+  color: var(--dp-oscuro);
 }
 
 .btn-modal-saltar:disabled {
@@ -808,12 +808,12 @@ h2::before {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
 }
 
 .panel-nombre-archivo {
   font-size: 0.78rem;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -821,10 +821,10 @@ h2::before {
 }
 
 .panel-documento {
-  background: var(--uts-blanco);
+  background: var(--dp-blanco);
   border-radius: 12px;
   padding: 1rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
@@ -836,8 +836,8 @@ h2::before {
   display: flex;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--uts-fondo);
-  border: 1px solid var(--uts-borde);
+  background: var(--dp-fondo);
+  border: 1px solid var(--dp-borde);
   min-height: 0;
 }
 
@@ -874,7 +874,7 @@ h2::before {
   gap: 0.75rem;
   padding: 2rem;
   text-align: center;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   font-size: 0.88rem;
   line-height: 1.6;
 }
@@ -909,7 +909,7 @@ h2::before {
 
 .acerca-parrafo {
   font-size: 0.92rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.75;
   margin-bottom: 0.5rem;
 }
@@ -920,7 +920,7 @@ h2::before {
   gap: 0.75rem;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
-  border-top: 1px solid var(--uts-borde);
+  border-top: 1px solid var(--dp-borde);
 }
 
 .acerca-dato-item {
@@ -934,13 +934,13 @@ h2::before {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
 }
 
 .acerca-dato-valor {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
 }
 
 /* ── Diagrama de Arquitectura ── */
@@ -965,7 +965,7 @@ h2::before {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
 }
 
 .arq-capa {
@@ -986,8 +986,8 @@ h2::before {
 .arq-icono       { font-size: 1.4rem; }
 
 .arq-capa-frontend {
-  background-color: var(--uts-verde-claro);
-  border-color: var(--uts-verde-borde);
+  background-color: var(--dp-verde-claro);
+  border-color: var(--dp-verde-borde);
   color: #0a6647;
 }
 
@@ -1025,14 +1025,14 @@ h2::before {
 
 .arq-flecha-texto {
   font-size: 0.68rem;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   font-weight: 600;
   white-space: nowrap;
 }
 
 .arq-flecha-linea {
   font-size: 1.6rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1;
 }
 
@@ -1040,8 +1040,8 @@ h2::before {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
-  background-color: var(--uts-verde-claro);
-  border: 1px solid var(--uts-verde-borde);
+  background-color: var(--dp-verde-claro);
+  border: 1px solid var(--dp-verde-borde);
   border-radius: 8px;
   padding: 0.75rem 1rem;
   font-size: 0.82rem;
@@ -1073,8 +1073,8 @@ h2::before {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: var(--uts-verde);
-  color: var(--uts-oscuro);
+  background-color: var(--dp-verde);
+  color: var(--dp-oscuro);
   font-size: 0.85rem;
   font-weight: 800;
   display: flex;
@@ -1094,7 +1094,7 @@ h2::before {
   width: 2px;
   height: 100%;
   min-height: 20px;
-  background-color: var(--uts-verde-borde);
+  background-color: var(--dp-verde-borde);
   border-radius: 1px;
 }
 
@@ -1106,13 +1106,13 @@ h2::before {
   display: block;
   font-size: 0.92rem;
   font-weight: 700;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.25rem;
 }
 
 .flujo-detalle {
   font-size: 0.84rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.6;
 }
 
@@ -1124,10 +1124,10 @@ h2::before {
 }
 
 .stack-grupo {
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   border-radius: 10px;
   padding: 1rem;
-  background: var(--uts-fondo);
+  background: var(--dp-fondo);
 }
 
 .stack-grupo-titulo {
@@ -1135,10 +1135,10 @@ h2::before {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.88rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.75rem;
   padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--uts-borde);
+  border-bottom: 1px solid var(--dp-borde);
 }
 
 .stack-lista {
@@ -1157,12 +1157,12 @@ h2::before {
 .stack-nombre {
   font-size: 0.84rem;
   font-weight: 700;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
 }
 
 .stack-descripcion {
   font-size: 0.78rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.4;
 }
 
@@ -1178,21 +1178,21 @@ h2::before {
   flex-direction: column;
   gap: 0.35rem;
   padding: 1rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   border-radius: 10px;
-  background: var(--uts-fondo);
+  background: var(--dp-fondo);
 }
 
 .principio-icono { font-size: 1.5rem; }
 
 .principio-item strong {
   font-size: 0.9rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
 }
 
 .principio-item p {
   font-size: 0.82rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.55;
 }
 
@@ -1208,9 +1208,9 @@ h2::before {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   border-radius: 8px;
-  background: var(--uts-fondo);
+  background: var(--dp-fondo);
 }
 
 .tipo-doc-icono {
@@ -1227,12 +1227,12 @@ h2::before {
 
 .tipo-doc-nombre {
   font-size: 0.9rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
 }
 
 .tipo-doc-campos {
   font-size: 0.8rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.5;
 }
 
@@ -1248,9 +1248,9 @@ h2::before {
   align-items: flex-start;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   border-radius: 8px;
-  background: var(--uts-fondo);
+  background: var(--dp-fondo);
 }
 
 .prueba-estado {
@@ -1275,12 +1275,12 @@ h2::before {
 
 .prueba-doc {
   font-size: 0.9rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
 }
 
 .prueba-resultado {
   font-size: 0.8rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   line-height: 1.5;
 }
 
@@ -1344,9 +1344,9 @@ h2::before {
    ============================================================ */
 
 .btn-secundario {
-  background-color: var(--uts-blanco);
-  color: var(--uts-oscuro);
-  border: 1.5px solid var(--uts-borde);
+  background-color: var(--dp-blanco);
+  color: var(--dp-oscuro);
+  border: 1.5px solid var(--dp-borde);
   padding: 0.65rem 1.4rem;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -1356,8 +1356,8 @@ h2::before {
 }
 
 .btn-secundario:hover:not(:disabled) {
-  border-color: var(--uts-gris-medio);
-  background-color: var(--uts-fondo);
+  border-color: var(--dp-gris-medio);
+  background-color: var(--dp-fondo);
 }
 
 .btn-secundario:disabled {
@@ -1446,7 +1446,7 @@ h2::before {
 
 .subtitulo-encuesta {
   font-size: 0.88rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   margin-bottom: 1.75rem;
 }
 
@@ -1463,7 +1463,7 @@ h2::before {
   border: none;
   font-size: 2.5rem;
   cursor: pointer;
-  color: var(--uts-borde);
+  color: var(--dp-borde);
   transition: color 0.15s, transform 0.1s;
   line-height: 1;
   padding: 0.1rem;
@@ -1492,7 +1492,7 @@ h2::before {
 .pregunta-encuesta {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.75rem;
 }
 
@@ -1503,9 +1503,9 @@ h2::before {
 }
 
 .opcion-tiempo-btn {
-  background: var(--uts-blanco);
-  border: 1.5px solid var(--uts-borde);
-  color: var(--uts-oscuro);
+  background: var(--dp-blanco);
+  border: 1.5px solid var(--dp-borde);
+  color: var(--dp-oscuro);
   padding: 0.45rem 1rem;
   border-radius: 20px;
   font-size: 0.84rem;
@@ -1515,13 +1515,13 @@ h2::before {
 }
 
 .opcion-tiempo-btn:hover {
-  border-color: var(--uts-verde);
-  background-color: var(--uts-verde-claro);
+  border-color: var(--dp-verde);
+  background-color: var(--dp-verde-claro);
 }
 
 .opcion-tiempo-activa {
-  border-color: var(--uts-verde);
-  background-color: var(--uts-verde-claro);
+  border-color: var(--dp-verde);
+  background-color: var(--dp-verde-claro);
   color: #3d6e06;
   font-weight: 700;
 }
@@ -1534,11 +1534,11 @@ h2::before {
 
 .textarea-comentario {
   width: 100%;
-  border: 1.5px solid var(--uts-borde);
+  border: 1.5px solid var(--dp-borde);
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
   font-size: 0.88rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   font-family: inherit;
   resize: vertical;
   outline: none;
@@ -1547,20 +1547,20 @@ h2::before {
 }
 
 .textarea-comentario:focus {
-  border-color: var(--uts-verde);
+  border-color: var(--dp-verde);
   box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
 }
 
-/* Input de código de documento para el piloto de validación */
+/* Input de código de documento (identificador opcional) */
 .input-codigo-documento {
   width: 100%;
   max-width: 220px;
-  border: 1.5px solid var(--uts-borde);
+  border: 1.5px solid var(--dp-borde);
   border-radius: 8px;
   padding: 0.55rem 0.85rem;
   font-size: 0.9rem;
   font-family: 'Courier New', Courier, monospace;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   letter-spacing: 0.05em;
   outline: none;
   transition: border-color 0.2s;
@@ -1569,13 +1569,13 @@ h2::before {
 }
 
 .input-codigo-documento:focus {
-  border-color: var(--uts-verde);
+  border-color: var(--dp-verde);
   box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
 }
 
 .texto-opcional {
   font-size: 0.78rem;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   font-weight: 400;
 }
 
@@ -1583,7 +1583,7 @@ h2::before {
   display: block;
   text-align: right;
   font-size: 0.75rem;
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   margin-top: 0.3rem;
 }
 
@@ -1597,9 +1597,9 @@ h2::before {
 }
 
 .error-encuesta {
-  background-color: var(--uts-error-fondo);
-  color: var(--uts-error);
-  border: 1px solid var(--uts-error-borde);
+  background-color: var(--dp-error-fondo);
+  color: var(--dp-error);
+  border: 1px solid var(--dp-error-borde);
   border-radius: 8px;
   padding: 0.6rem 1rem;
   margin-bottom: 1rem;
@@ -1640,31 +1640,31 @@ h2::before {
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   margin-bottom: 0.3rem;
 }
 
 .admin-input {
   width: 100%;
-  border: 1.5px solid var(--uts-borde);
+  border: 1.5px solid var(--dp-borde);
   border-radius: 8px;
   padding: 0.65rem 0.85rem;
   font-size: 0.9rem;
-  color: var(--uts-oscuro);
-  background: var(--uts-blanco);
+  color: var(--dp-oscuro);
+  background: var(--dp-blanco);
   outline: none;
   transition: border-color 0.2s;
 }
 
 .admin-input:focus {
-  border-color: var(--uts-verde);
+  border-color: var(--dp-verde);
   box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
 }
 
 .error-admin {
-  background-color: var(--uts-error-fondo);
-  color: var(--uts-error);
-  border: 1px solid var(--uts-error-borde);
+  background-color: var(--dp-error-fondo);
+  color: var(--dp-error);
+  border: 1px solid var(--dp-error-borde);
   border-radius: 8px;
   padding: 0.6rem 1rem;
   font-size: 0.88rem;
@@ -1697,10 +1697,10 @@ h2::before {
 }
 
 .metrica-card {
-  background: var(--uts-blanco);
+  background: var(--dp-blanco);
   border-radius: 12px;
   padding: 1.25rem 1rem;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
@@ -1712,13 +1712,13 @@ h2::before {
 .metrica-numero {
   font-size: 2rem;
   font-weight: 800;
-  color: var(--uts-verde-oscuro);
+  color: var(--dp-verde-oscuro);
   line-height: 1;
 }
 
 .metrica-label {
   font-size: 0.78rem;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   font-weight: 500;
   text-align: center;
 }
@@ -1744,22 +1744,22 @@ h2::before {
 
 .tipo-nombre {
   font-size: 0.85rem;
-  color: var(--uts-oscuro);
+  color: var(--dp-oscuro);
   font-weight: 500;
   word-break: break-word;
 }
 
 .barra-contenedor {
   height: 10px;
-  background-color: var(--uts-fondo);
+  background-color: var(--dp-fondo);
   border-radius: 5px;
   overflow: hidden;
-  border: 1px solid var(--uts-borde);
+  border: 1px solid var(--dp-borde);
 }
 
 .barra-relleno {
   height: 100%;
-  background-color: var(--uts-verde);
+  background-color: var(--dp-verde);
   border-radius: 5px;
   transition: width 0.4s ease;
   min-width: 4px;
@@ -1772,7 +1772,7 @@ h2::before {
 .tipo-cantidad {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   text-align: right;
 }
 
@@ -1791,19 +1791,19 @@ h2::before {
 .tabla-actividad th {
   text-align: left;
   padding: 0.65rem 0.85rem;
-  border-bottom: 2px solid var(--uts-borde);
+  border-bottom: 2px solid var(--dp-borde);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   white-space: nowrap;
 }
 
 .tabla-actividad td {
   padding: 0.65rem 0.85rem;
-  border-bottom: 1px solid var(--uts-borde);
-  color: var(--uts-oscuro);
+  border-bottom: 1px solid var(--dp-borde);
+  color: var(--dp-oscuro);
   vertical-align: top;
 }
 
@@ -1812,7 +1812,7 @@ h2::before {
 }
 
 .tabla-actividad tr:hover td {
-  background-color: var(--uts-fondo);
+  background-color: var(--dp-fondo);
 }
 
 .celda-comentario {
@@ -1820,12 +1820,12 @@ h2::before {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--uts-gris-medio) !important;
+  color: var(--dp-gris-medio) !important;
   font-style: italic;
 }
 
 .sin-datos {
-  color: var(--uts-gris-claro);
+  color: var(--dp-gris-claro);
   font-size: 0.9rem;
   padding: 1rem 0;
   text-align: center;
@@ -1839,7 +1839,7 @@ h2::before {
 }
 
 .cargando-texto {
-  color: var(--uts-gris-medio);
+  color: var(--dp-gris-medio);
   font-size: 0.92rem;
   text-align: center;
   padding: 3rem 0;

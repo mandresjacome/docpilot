@@ -210,7 +210,7 @@ const eliminarRegistro = async (id) => {
 
 /**
  * limpiarTodosLosRegistros — borra todos los registros de la tabla.
- * Uso exclusivo del panel admin para limpiar datos de prueba antes del piloto real.
+ * Uso exclusivo del panel admin para limpiar datos de prueba.
  * Utiliza .not('id', 'is', null) para coincidir con todas las filas (RLS activo).
  *
  * @returns {Promise<void>}

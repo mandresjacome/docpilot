@@ -8,7 +8,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '/api';
 /**
  * obtenerDashboard — llama al endpoint admin/dashboard con el token de acceso.
  *
- * @param {string} token - Token de administrador ingresado por la profe
+ * @param {string} token - Token de administrador ingresado por la persona administradora
  * @returns {Promise<Object>} - { metricas, actividadReciente }
  * @throws {Error} si el token es inválido (401) o hay error de red
  */

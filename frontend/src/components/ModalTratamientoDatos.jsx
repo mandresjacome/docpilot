@@ -107,12 +107,11 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
           </p>
           <p style={{ marginTop: '0.6rem' }}>
             Con tu autorización, el correo electrónico y determinados metadatos de uso se
-            registran únicamente para el seguimiento y la evaluación académica del proyecto.
+            registran únicamente para medir el uso y mejorar la aplicación.
             No recibirás comunicaciones comerciales.
           </p>
           <p style={{ marginTop: '0.6rem' }}>
-            Responsable del tratamiento: <strong>Proyecto MiDocIA</strong> —
-            Ingeniería de Sistemas, Unidades Tecnológicas de Santander, 2026.
+            Responsable del tratamiento: <strong>Mario Andrés Jácome</strong>, autor de DocPilot.
           </p>
         </div>
 
@@ -148,7 +147,7 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
             <span>
               He leído la información anterior, conozco la finalidad del tratamiento
               y autorizo el uso de mi correo electrónico y los metadatos de uso para
-              la evaluación académica del proyecto.
+              medir el uso y mejorar la aplicación.
             </span>
           </label>
 

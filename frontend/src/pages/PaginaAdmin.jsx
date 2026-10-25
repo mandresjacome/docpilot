@@ -1,4 +1,4 @@
-// Página del panel de administración — exclusiva para la docente/investigadora.
+// Página del panel de administración — exclusiva para la persona administradora.
 // Acceso protegido: el usuario debe ingresar el token de administrador para ver los datos.
 // El token se guarda en sessionStorage (no localStorage) para que expire al cerrar el tab,
 // evitando que quede activo indefinidamente en el navegador de un tercero.

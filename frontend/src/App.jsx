@@ -69,7 +69,7 @@ const App = () => {
             <img
               src="/logo-docpilot.png"
               alt="Logo DocPilot"
-              className="logo-uts-img"
+              className="logo-img"
             />
             <div className="header-divisor" />
             <div className="header-titulo">
@@ -130,11 +130,8 @@ const App = () => {
           <p className="footer-proyecto">
             DocPilot — Asistente de análisis documental con Inteligencia Artificial
           </p>
-          <p className="footer-creditos">
-            Proyecto de Grado · Ingeniería de Sistemas · Unidades Tecnológicas de Santander
-          </p>
           <p className="footer-autor">
-            Mario Andrés Jácome Mantilla · 2026
+            Mario Andrés Jácome · 2026
           </p>
         </div>
       </footer>

@@ -1,8 +1,6 @@
 // Página "Acerca del Aplicativo" — Ficha Técnica del Desarrollo.
-// Muestra la arquitectura, el stack tecnológico, el flujo de funcionamiento,
-// los tipos de documentos soportados y las pruebas realizadas.
-// Esta vista NO menciona herramientas de asistencia de codificación;
-// presenta únicamente las tecnologías de producción del sistema.
+// Muestra la arquitectura, el stack tecnológico, el flujo de funcionamiento
+// y los tipos de documentos soportados.
 
 import React from 'react';
 
@@ -13,7 +11,7 @@ const TECNOLOGIAS = [
     icono: '⚛️',
     items: [
       { nombre: 'React 18', descripcion: 'Biblioteca de interfaz de usuario — componentes funcionales y Hooks' },
-      { nombre: 'Vite 5', descripcion: 'Herramienta de compilación y servidor de desarrollo ultrarrápido' },
+      { nombre: 'Vite 6', descripcion: 'Herramienta de compilación y servidor de desarrollo ultrarrápido' },
       { nombre: 'CSS Custom Properties', descripcion: 'Sistema de diseño con variables CSS — identidad visual DocPilot' },
     ],
   },
@@ -21,10 +19,10 @@ const TECNOLOGIAS = [
     categoria: 'Backend',
     icono: '🖥️',
     items: [
-      { nombre: 'Node.js 20', descripcion: 'Entorno de ejecución JavaScript del lado del servidor' },
+      { nombre: 'Node.js 18+', descripcion: 'Entorno de ejecución JavaScript del lado del servidor' },
       { nombre: 'Express 4', descripcion: 'Framework web minimalista para la API REST' },
       { nombre: 'Multer (memoryStorage)', descripcion: 'Recepción de archivos en buffer RAM — sin escritura en disco' },
-      { nombre: 'pdf-lib', descripcion: 'División de PDFs extensos en memoria — soporta hasta 30 páginas por procesamiento' },
+      { nombre: 'pdf-lib', descripcion: 'Lectura de PDFs y división en bloques de 14 páginas, en memoria, para respetar el límite de Document AI' },
     ],
   },
   {
@@ -54,13 +52,13 @@ const TECNOLOGIAS = [
 // ── Pasos del flujo de procesamiento ──
 const PASOS_FLUJO = [
   { num: '1', titulo: 'Selección', detalle: 'El usuario selecciona un documento (PDF, PNG, JPEG o TIFF) desde su dispositivo.' },
-  { num: '2', titulo: 'Validación', detalle: 'El frontend valida tipo y tamaño antes de enviar. El backend valida nuevamente en la frontera del sistema.' },
+  { num: '2', titulo: 'Validación', detalle: 'El frontend valida tipo y tamaño antes de enviar. El backend vuelve a validar tamaño, tipo declarado, extensión, firma real y estructura del archivo.' },
   { num: '3', titulo: 'Buffer RAM', detalle: 'El archivo se carga en memoria RAM del servidor con Multer memoryStorage. Nunca toca el disco.' },
   { num: '4', titulo: 'OCR', detalle: 'Google Cloud Document AI procesa el buffer y extrae el texto con alta fidelidad. PDFs de más de 14 páginas se dividen automáticamente en memoria.' },
-  { num: '5', titulo: 'Clasificación IA', detalle: 'Primera llamada liviana a Gemini: identifica la categoría del documento con los primeros 3.000 caracteres.' },
+  { num: '5', titulo: 'Clasificación IA', detalle: 'Primera llamada liviana a Gemini: identifica la categoría del documento a partir de una muestra del inicio y del cuerpo del texto.' },
   { num: '6', titulo: 'Análisis IA', detalle: 'Segunda llamada a Gemini con el texto completo y un prompt especializado según la categoría detectada.' },
   { num: '7', titulo: 'Revisión HITL', detalle: 'El resultado llega al usuario. El sistema espera su revisión explícita antes de cualquier acción (Human-in-the-Loop).' },
-  { num: '8', titulo: 'Confirmación', detalle: 'Solo tras la aprobación del usuario se completa el flujo. El buffer en RAM es descartado automáticamente.' },
+  { num: '8', titulo: 'Confirmación', detalle: 'Solo tras la aprobación del usuario se registra la confirmación. Si el registro no puede guardarse, la aplicación lo indica en lugar de darlo por exitoso.' },
 ];
 
 // ── Tipos de documentos soportados ──
@@ -88,14 +86,14 @@ const PaginaAcercaDe = () => {
       <section className="card">
         <h2>Descripción General</h2>
         <p className="acerca-parrafo">
-          <strong>DocPilot</strong> es una aplicación web desarrollada como proyecto de grado que integra{' '}
+          <strong>DocPilot</strong> es una aplicación web que integra{' '}
           <strong>Reconocimiento Óptico de Caracteres (OCR)</strong> e{' '}
           <strong>Inteligencia Artificial Generativa</strong> para apoyar a las micro,
-          pequeñas y medianas empresas (mipymes) de Bucaramanga en la comprensión y
+          pequeñas y medianas empresas (mipymes) en la comprensión y
           respuesta de sus documentos. Los archivos se procesan temporalmente y no se
           almacenan de forma persistente en la infraestructura de DocPilot. Con
-          autorización explícita, se registran únicamente metadatos de sesión para el
-          seguimiento académico del proyecto.
+          autorización explícita, se registran únicamente metadatos de sesión para
+          medir el uso y mejorar la aplicación.
         </p>
         <p className="acerca-parrafo">
           El sistema extrae automáticamente los datos relevantes de diferentes documentos
@@ -103,28 +101,12 @@ const PaginaAcercaDe = () => {
           recomendaciones de acción que el usuario debe revisar y aprobar antes de
           utilizarlas. Además, incluye una <strong>encuesta voluntaria de utilidad</strong>{' '}
           posterior al análisis y un <strong>panel administrativo</strong> con métricas
-          para el equipo investigador.
+          de uso.
         </p>
         <div className="acerca-datos-grid">
           <div className="acerca-dato-item">
-            <span className="acerca-dato-label">Tipo de trabajo</span>
-            <span className="acerca-dato-valor">Proyecto de Grado</span>
-          </div>
-          <div className="acerca-dato-item">
-            <span className="acerca-dato-label">Institución</span>
-            <span className="acerca-dato-valor">Unidades Tecnológicas de Santander — UTS</span>
-          </div>
-          <div className="acerca-dato-item">
-            <span className="acerca-dato-label">Programa</span>
-            <span className="acerca-dato-valor">Ingeniería de Sistemas</span>
-          </div>
-          <div className="acerca-dato-item">
             <span className="acerca-dato-label">Autor</span>
-            <span className="acerca-dato-valor">Mario Andrés Jácome Mantilla</span>
-          </div>
-          <div className="acerca-dato-item">
-            <span className="acerca-dato-label">Directora del proyecto</span>
-            <span className="acerca-dato-valor">Yuli Andrea Álvarez Pizarro</span>
+            <span className="acerca-dato-valor">Mario Andrés Jácome</span>
           </div>
           <div className="acerca-dato-item">
             <span className="acerca-dato-label">Año</span>
@@ -167,7 +149,7 @@ const PaginaAcercaDe = () => {
             <div className="arq-capa arq-capa-frontend">
               <span className="arq-icono">⚛️</span>
               <strong>Frontend React</strong>
-              <small>Railway · CDN</small>
+              <small>Servido por Express · Railway</small>
             </div>
           </div>
           <div className="arq-flecha">
