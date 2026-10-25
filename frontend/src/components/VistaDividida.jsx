@@ -35,7 +35,7 @@ const VistaDividida = ({ archivo, resultado, onConfirmar, cargando, tiempoAnalis
     setUrlPreview(url);
 
     // Cleanup: revocar la URL cuando el componente se desmonte o el archivo cambie.
-    // Esto libera la referencia en memoria del navegador — coherente con Zero Storage.
+    // Esto libera la referencia en memoria del navegador.
     return () => {
       URL.revokeObjectURL(url);
     };

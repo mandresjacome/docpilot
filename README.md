@@ -1,202 +1,239 @@
-# MiDocIA — Asistente de Análisis Documental con IA
+# DocPilot
 
-> **Proyecto de Grado — Unidades Tecnológicas de Santander (UTS)**
-> Autor: Mario Andrés Jácome Mantilla | Directora: Yuli Andrea Álvarez Pizarro
+**Asistente de análisis documental con OCR e IA generativa, con revisión humana (Human-in-the-Loop).**
 
-Aplicación web que permite a las Mipymes cargar documentos digitalizados (PDFs e imágenes) y obtener en segundos un análisis estructurado: tipo de documento, datos relevantes, alertas de fechas críticas y una sugerencia de respuesta o recomendación de acción, todo sin almacenar ningún archivo en el servidor. Incluye encuesta de utilidad post-análisis y panel de administración con métricas para el equipo investigador.
+DocPilot permite cargar un documento (PDF, PNG, JPEG o TIFF), extraer su texto con **Google Cloud Document AI**, clasificarlo y analizarlo con **Google Gemini**, y mostrar al usuario un resultado estructurado (datos relevantes, alertas de fechas críticas y una sugerencia de respuesta o recomendación de acción) que **debe revisar y confirmar** antes de cualquier acción final.
 
----
+> **Privacidad en una línea:** DocPilot no guarda los documentos en disco ni en su base de datos, pero sí los envía a Google (Document AI y Gemini) para procesarlos. Detalle completo en [docs/DATOS_Y_PRIVACIDAD.md](docs/DATOS_Y_PRIVACIDAD.md).
 
-## Características principales
+## Contenido
 
-- **OCR con Google Cloud Document AI** — extrae el texto de facturas, contratos, PQRS, documentos judiciales, cartas y cotizaciones.
-- **Análisis con Gemini 2.5 Flash** — clasifica el documento en una de 7 categorías y genera un JSON estructurado con los campos más relevantes para la operación de una Mipyme.
-- **Zero Storage** — ningún archivo se guarda en disco ni en la nube. El PDF/imagen vive únicamente en RAM durante el procesamiento y se descarta de inmediato.
-- **Human-in-the-Loop (HITL)** — la IA nunca actúa de forma autónoma. El usuario siempre revisa y confirma el resultado antes de ejecutar cualquier acción final.
-- **Encuesta de utilidad post-HITL** — tras confirmar el análisis, el usuario puede valorar la herramienta (1–5 estrellas, tiempo ahorrado, comentario). Datos persistidos en Supabase.
-- **Panel de administración** — dashboard protegido por token con métricas agregadas: documentos procesados, calificación promedio, distribución por tipo, tiempo ahorrado declarado y actividad reciente.
-- **Soporte hasta 30 páginas por trozo** — los PDFs extensos se dividen automáticamente en memoria con `pdf-lib` para superar el límite de 15 páginas de Document AI.
-- **Respuesta contextual** — el botón y el título del análisis cambian según el tipo de documento: "Sugerencia de respuesta" para documentos con destinatario; "Recomendación de acción" para documentos de gestión interna.
+- [Funcionalidades](#funcionalidades)
+- [Tecnologías](#tecnologías)
+- [Arquitectura](#arquitectura)
+- [Requisitos](#requisitos)
+- [Instalación](#instalación)
+- [Variables de entorno](#variables-de-entorno)
+- [Configuración de servicios externos](#configuración-de-servicios-externos)
+- [Ejecución](#ejecución)
+- [Pruebas](#pruebas)
+- [API](#api)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Para desarrolladores](#para-desarrolladores)
+- [Limitaciones conocidas](#limitaciones-conocidas)
 
----
+## Funcionalidades
 
-## Stack tecnológico
+- **Carga y validación de archivos** — PDF, PNG, JPEG y TIFF de hasta 10 MB. El backend valida el MIME declarado, la extensión, la firma real del contenido y la estructura del archivo (rechaza vacíos, truncados, corruptos o con el tipo falsificado).
+- **OCR** con Google Cloud Document AI. Los PDF de más de 14 páginas se dividen automáticamente en memoria (`pdf-lib`) para respetar el límite de la API.
+- **Clasificación y análisis en dos fases** con Gemini 2.5 Flash: primero se identifica la categoría (`contrato`, `factura`, `pqrs`, `documento_judicial`, `carta`, `cotizacion`, `otro`) y luego se aplica un prompt especializado que extrae los campos relevantes de esa categoría.
+- **Human-in-the-Loop** — la IA solo propone. El usuario revisa el resultado junto al documento (vista dividida) y lo confirma explícitamente. El texto del botón cambia según el tipo de documento (*sugerencia de respuesta* o *recomendación de acción*).
+- **Encuesta de utilidad opcional** tras confirmar (1–5 estrellas, tiempo ahorrado, comentario).
+- **Panel de administración** protegido por token: métricas agregadas (documentos procesados, confirmados, valoración promedio, distribución por tipo, tiempo de procesamiento) y borrado de registros.
+- **Errores honestos** — si falla el guardado en Supabase, el OCR o la IA, la API responde con el error correspondiente en lugar de simular un éxito. Si solo falla el registro de uso, el análisis se entrega con una advertencia explícita.
+
+## Tecnologías
 
 | Capa | Tecnología |
 |------|-----------|
-| Frontend | React 18 — componentes funcionales + Hooks |
-| Backend | Node.js + Express |
-| OCR | Google Cloud Document AI |
-| IA / Análisis | Google Gemini API (`gemini-2.5-flash`) |
-| Base de datos | Supabase (solo metadatos de sesión — Zero Storage) |
-| Bundler | Vite 5 |
-| Gestión de paquetes | npm workspaces (monorepo) |
-| Despliegue | Railway (backend + frontend en un solo servicio) |
+| Frontend | React 18 (componentes funcionales + Hooks), Vite 6 |
+| Backend | Node.js (≥ 18), Express 4, Multer (memoryStorage), pdf-lib |
+| OCR | Google Cloud Document AI (API REST, autenticación con `google-auth-library`) |
+| IA | Google Gemini API (`@google/genai`, modelo `gemini-2.5-flash`) |
+| Base de datos | Supabase (PostgreSQL) mediante `@supabase/supabase-js` |
+| Pruebas | Jest + Supertest (backend) |
+| Monorepo | npm workspaces (`backend`, `frontend`) |
+| Despliegue de referencia | Railway (un único servicio que sirve API y frontend) |
 
----
+## Arquitectura
 
-## Estructura del proyecto
-
-```
-proyectoUTS/
-├── package.json               ← raíz del monorepo (npm workspaces)
-├── backend/
-│   ├── server.js              ← arranque del servidor
-│   ├── app.js                 ← configuración de Express y rutas
-│   ├── routes/
-│   │   ├── documento.routes.js
-│   │   ├── visita.routes.js
-│   │   └── admin.routes.js    ← panel admin (protegido por token)
-│   ├── controllers/
-│   │   ├── documento.controller.js
-│   │   ├── visita.controller.js
-│   │   └── admin.controller.js
-│   ├── services/
-│   │   ├── ocr.service.js     ← integración Document AI
-│   │   ├── gemini.service.js  ← integración Gemini API
-│   │   └── supabase.service.js ← métricas de uso (metadatos)
-│   └── middlewares/
-│       ├── validarArchivo.js  ← multer memoryStorage + validación MIME
-│       └── errorHandler.js    ← manejador global de errores
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── PaginaAnalisis.jsx   ← flujo HITL + encuesta
-        │   ├── PaginaAcercaDe.jsx   ← ficha técnica del proyecto
-        │   └── PaginaAdmin.jsx      ← dashboard de métricas
-        ├── components/
-        │   ├── FormularioDocumento.jsx
-        │   ├── ResultadoAnalisis.jsx
-        │   ├── VistaDividida.jsx
-        │   ├── ModalTratamientoDatos.jsx
-        │   └── EncuestaUtilidad.jsx ← encuesta post-HITL
-        └── services/
-            ├── documento.service.js ← capa fetch al backend
-            └── admin.service.js     ← llamadas al panel admin
-```
-    └── src/
-        ├── pages/
-        │   └── PaginaAnalisis.jsx   ← flujo HITL completo
-        ├── components/
-        │   ├── FormularioDocumento.jsx
-        │   ├── ResultadoAnalisis.jsx
-        │   ├── VistaDividida.jsx
-        │   ├── ModalTratamientoDatos.jsx
-        │   └── EncuestaUtilidad.jsx ← encuesta post-HITL
-        └── services/
-            ├── documento.service.js ← capa fetch al backend
-            └── admin.service.js     ← llamadas al panel admin
+```mermaid
+flowchart LR
+  U["Navegador<br/>React + Vite"] -->|"multipart / JSON"| API["API Express"]
+  API -->|"archivo (base64)"| DAI["Google Document AI<br/>OCR"]
+  API -->|"texto extraído"| GEM["Google Gemini<br/>clasificación y análisis"]
+  API -->|"solo metadatos"| SB[("Supabase<br/>registros_uso")]
 ```
 
----
+Flujo resumido de `POST /api/documentos/analizar`:
 
-## Requisitos previos
+1. **Validación** del archivo (tamaño, MIME, extensión, firma y estructura) — el archivo queda solo en memoria (`multer.memoryStorage()`).
+2. **OCR** con Document AI (dividiendo PDF extensos).
+3. **Clasificación + análisis** con Gemini.
+4. **Registro de metadatos** en Supabase (tipo, tiempo, confirmado=false).
+5. **Respuesta** al frontend para que el usuario revise (HITL). La confirmación y la encuesta llegan después, en endpoints separados.
 
-- Node.js 18 o superior
-- Cuenta de Google Cloud con **Document AI** habilitado y un procesador OCR creado
-- API Key de **Google Gemini** (Google AI Studio)
-- Archivo de credenciales de servicio de GCP (`.json`)
+Más detalle (flujo paso a paso, contratos de la API, códigos de error, decisiones de diseño) en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
 
----
+## Requisitos
+
+- Node.js 18 o superior y npm 9 o superior.
+- Un proyecto de Supabase.
+- Una cuenta de Google Cloud con Document AI habilitado y un procesador OCR.
+- Una API key de Gemini (Google AI Studio).
+
+Para solo ejecutar las pruebas no necesitas ninguna cuenta externa.
 
 ## Instalación
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/mandresjacome/proyectoUTS.git
-cd proyectoUTS
-
-# 2. Instalar todas las dependencias (backend + frontend)
-npm install --workspaces
+git clone https://github.com/mandresjacome/docpilot.git
+cd docpilot
+npm install        # instala backend y frontend (npm workspaces)
 ```
 
----
-
-## Configuración de variables de entorno
-
-### Backend — `backend/.env`
-
-Crea el archivo `backend/.env` basándote en `backend/.env.example`:
-
-```env
-GOOGLE_APPLICATION_CREDENTIALS=./credenciales/tu-archivo.json
-DOCUMENT_AI_PROJECT_ID=tu_project_id
-DOCUMENT_AI_LOCATION=us
-DOCUMENT_AI_PROCESSOR_ID=tu_processor_id
-GEMINI_API_KEY=tu_api_key
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJhbGc...
-ADMIN_TOKEN=tu_token_hexadecimal_48chars
-PORT=3000
-```
-
-> Coloca el archivo `.json` de credenciales de GCP dentro de `backend/credenciales/`. Esta carpeta está en `.gitignore` y nunca se sube al repositorio.
-
-### Frontend — `frontend/.env`
-
-```env
-VITE_API_URL=http://localhost:3000
-```
-
----
-
-## Ejecución en desarrollo
+Crea los archivos de entorno a partir de las plantillas:
 
 ```bash
-# Arranca backend y frontend simultáneamente
-npm run dev
-
-# O por separado:
-npm run dev:backend    # nodemon en puerto 3000
-npm run dev:frontend   # Vite en puerto 5173
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local    # opcional en desarrollo
 ```
 
-Abre [http://localhost:5173](http://localhost:5173) en el navegador.
+En Windows (PowerShell): `Copy-Item backend\.env.example backend\.env`.
 
----
+## Variables de entorno
 
-## Endpoints de la API
+### Backend (`backend/.env`)
+
+| Variable | Obligatoria | Descripción |
+|----------|:-----------:|-------------|
+| `SUPABASE_URL` | Sí (al arrancar) | URL del proyecto Supabase. |
+| `SUPABASE_SERVICE_KEY` | Sí (al arrancar) | Clave `service_role`. **Solo backend; nunca en el frontend.** |
+| `GEMINI_API_KEY` | Sí (al analizar) | API key de Gemini. |
+| `DOCUMENT_AI_PROJECT_ID` | Sí (al analizar) | ID del proyecto de Google Cloud. |
+| `DOCUMENT_AI_LOCATION` | Sí (al analizar) | Región del procesador (`us` o `eu`). |
+| `DOCUMENT_AI_PROCESSOR_ID` | Sí (al analizar) | ID del procesador OCR. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Desarrollo | Ruta al JSON de la cuenta de servicio (p. ej. `./credenciales/gcp-service-account.json`; la carpeta está en `.gitignore`). |
+| `GOOGLE_CREDENTIALS_JSON` | Producción | Contenido completo del JSON de la cuenta de servicio. Tiene prioridad sobre la anterior. |
+| `ADMIN_TOKEN` | Para el panel admin | Secreto largo y aleatorio (`openssl rand -hex 32`). Si falta, el panel responde 503. |
+| `NODE_ENV` | Producción | `production` sirve el frontend compilado y desactiva CORS. |
+| `PORT` | No | Por defecto `3001`. |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Descripción |
+|----------|-------------|
+| `VITE_API_URL` | Base de la API **incluyendo `/api`**. Déjala vacía en desarrollo (el proxy de Vite reenvía `/api` a `localhost:3001`) y en producción con mismo origen. Solo se define si el backend vive en otro dominio. |
+
+> Nunca subas `.env`, `.env.local` ni el JSON de credenciales. Todos están en `.gitignore`.
+
+## Configuración de servicios externos
+
+### Supabase
+
+1. Crea un proyecto y ejecuta el esquema de [docs/supabase-schema.sql](docs/supabase-schema.sql) en el *SQL Editor* (crea la tabla `registros_uso`).
+2. Copia la **URL** y la clave **service_role** (Project Settings → API) a `SUPABASE_URL` y `SUPABASE_SERVICE_KEY`.
+
+### Google Cloud Document AI
+
+1. Habilita la API *Cloud Document AI* en tu proyecto.
+2. Crea un procesador de tipo **Document OCR** y anota su ID y su región.
+3. Crea una cuenta de servicio con el rol **Document AI API User** y descarga su clave JSON.
+4. Desarrollo: guarda el JSON en `backend/credenciales/` y apunta `GOOGLE_APPLICATION_CREDENTIALS` a él. Producción: pega su contenido en `GOOGLE_CREDENTIALS_JSON`.
+
+### Gemini
+
+Genera una API key en [Google AI Studio](https://aistudio.google.com/) y colócala en `GEMINI_API_KEY`. Revisa en los términos vigentes de la API qué ocurre con el contenido enviado según uses el nivel gratuito o de pago (ver [docs/DATOS_Y_PRIVACIDAD.md](docs/DATOS_Y_PRIVACIDAD.md)).
+
+## Ejecución
+
+```bash
+npm run dev            # backend (nodemon, :3001) y frontend (Vite, :5173) a la vez
+# o por separado:
+npm run dev:backend
+npm run dev:frontend
+```
+
+Abre <http://localhost:5173>. Vite reenvía `/api/*` al backend, por lo que en desarrollo no hay solicitudes cross-origin.
+
+Build y ejecución tipo producción (un único proceso):
+
+```bash
+npm run build                       # genera frontend/dist
+NODE_ENV=production npm start       # Express sirve la API y el frontend compilado
+# PowerShell: $env:NODE_ENV = 'production'; npm start
+```
+
+Guía de despliegue en Railway: [docs/DESPLIEGUE.md](docs/DESPLIEGUE.md).
+
+## Pruebas
+
+```bash
+npm test                                   # toda la suite del backend
+npm run test:coverage --workspace=backend  # con informe de cobertura
+```
+
+La suite usa **Jest + Supertest** y **simula todos los servicios externos** (Supabase, Document AI, Gemini): no consume cuotas ni necesita credenciales. Cubre:
+
+- Carga y validación de archivos (firmas, extensión, tamaño, archivos vacíos, truncados o manipulados).
+- OCR: división de PDF, errores de Document AI, respuestas inválidas.
+- IA: clasificación, limpieza del JSON, respuestas vacías o mal formadas, fallos de la API.
+- Registro en Supabase: éxito, errores devueltos y excepciones de red, ausencia de datos de contacto.
+- Rutas de documentos de extremo a extremo (analizar → confirmar → encuesta) y su manejo de errores.
+- Protección de rutas administrativas (401/503/404/502, token en tiempo constante).
+- CORS (preflight de `DELETE`, orígenes y headers permitidos) y el manejador global de errores.
+
+El frontend no tiene pruebas automatizadas todavía.
+
+## API
 
 | Método | Ruta | Descripción |
-|--------|------|--------------| 
-| `POST` | `/api/documentos/analizar` | Recibe el documento (multipart), ejecuta OCR + Gemini y devuelve el análisis estructurado para revisión HITL |
-| `POST` | `/api/documentos/confirmar` | Acción final — solo se invoca tras confirmación explícita del usuario en la UI |
-| `POST` | `/api/documentos/encuesta` | Recibe la valoración post-HITL y actualiza el registro en Supabase |
-| `POST` | `/api/visitas/registrar` | Registra el consentimiento de tratamiento de datos (log en consola) |
-| `GET`  | `/api/admin/dashboard` | Devuelve métricas agregadas — requiere header `x-admin-token` |
+|--------|------|-------------|
+| `POST` | `/api/documentos/analizar` | Recibe `multipart/form-data` (campo `documento`), ejecuta OCR + IA y devuelve el análisis. |
+| `POST` | `/api/documentos/confirmar` | Cierra el ciclo HITL y marca el registro como confirmado. |
+| `POST` | `/api/documentos/encuesta` | Guarda la valoración del usuario. |
+| `POST` | `/api/visitas/registrar` | Registra en el log del servidor que se aceptó el tratamiento de datos (sin datos personales). |
+| `GET` | `/api/admin/dashboard` | Métricas agregadas. Header `x-admin-token`. |
+| `DELETE` | `/api/admin/registros/:id` | Elimina un registro. Header `x-admin-token`. |
+| `DELETE` | `/api/admin/registros` | Elimina todos los registros. Header `x-admin-token`. |
 
-**Formatos aceptados:** PDF, PNG, JPEG, TIFF — máximo 10 MB por archivo.
+Los errores devuelven `{ "error": "mensaje", "codigo": "CODIGO_ESTABLE" }`. Contratos y códigos en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md#contratos-de-la-api).
 
----
+## Estructura del proyecto
 
-## Tipos de documentos soportados
+```
+docpilot/
+├── backend/
+│   ├── app.js                      # configuración de Express (CORS, rutas, estáticos, errores)
+│   ├── server.js                   # arranque (separado de app.js para poder testear)
+│   ├── config/cors.js              # orígenes, métodos y headers de CORS (desarrollo)
+│   ├── routes/                     # URL → controlador (sin lógica)
+│   ├── controllers/                # orquestación de cada petición
+│   ├── services/
+│   │   ├── ocr.service.js          # Google Document AI
+│   │   ├── gemini.service.js       # clasificación y análisis con Gemini
+│   │   ├── supabase.service.js     # persistencia de metadatos (errores tipados)
+│   │   └── validacionArchivo.service.js  # firma, extensión y estructura de archivos
+│   ├── middlewares/                # validarArchivo (multer + validación), errorHandler
+│   ├── utils/errores.js            # ErrorApp (estado HTTP + código estable) y esUUID
+│   └── tests/                      # Jest + Supertest, con helpers y mocks
+├── frontend/
+│   └── src/
+│       ├── pages/                  # PaginaAnalisis, PaginaAdmin, PaginaAcercaDe
+│       ├── components/             # formulario, vista dividida, resultado, encuesta, modal
+│       └── services/               # capa fetch hacia la API
+├── docs/                           # arquitectura, datos y privacidad, despliegue, esquema SQL
+├── .github/                        # instrucciones para asistentes de código del repositorio
+├── railway.json                    # configuración de build/arranque para Railway
+└── package.json                    # raíz del monorepo (workspaces y scripts)
+```
 
-| Categoría | Campos extraídos |
-|-----------|-----------------|
-| `contrato` | partes, objeto, valor, vigencia, obligaciones, cláusulas de riesgo |
-| `factura` | número, emisor, receptor, fechas, subtotal, impuestos, total, estado de pago |
-| `pqrs` | remitente, motivo, solicitud concreta, plazo legal, fecha límite de respuesta |
-| `documento_judicial` | autoridad, expediente, partes, orden principal, plazos, consecuencias |
-| `carta` | remitente, destinatario, asunto, acción requerida |
-| `cotizacion` | proveedor, cliente, ítems, total, condiciones de pago, tiempo de entrega |
-| `otro` | resumen general, datos clave detectados, recomendación de acción |
+## Para desarrolladores
 
-Todos los tipos incluyen un campo **`alertas`** con fechas críticas, cláusulas desfavorables o plazos próximos a vencer.
+- **Orden de lectura sugerido:** `backend/app.js` → `routes/documento.routes.js` → `middlewares/validarArchivo.js` → `controllers/documento.controller.js` → `services/*`.
+- **Convención de errores:** los servicios lanzan `ErrorApp` (`utils/errores.js`) con estado y código; los controladores hacen `next(error)`; `middlewares/errorHandler.js` los convierte en JSON, registra siempre los 5xx y, en producción, oculta el detalle de errores no controlados.
+- **Añadir una categoría de documento:** agrégala a `CATEGORIAS` y define su prompt en `PROMPTS_POR_TIPO` (`services/gemini.service.js`); el frontend renderiza los campos dinámicamente en `ResultadoAnalisis.jsx`. Añade una prueba en `tests/gemini.service.test.js`.
+- **Reglas de contribución para asistentes de código:** ver [.github/instrucciones.md](.github/instrucciones.md).
 
----
+## Limitaciones conocidas
 
-## Principios de diseño
-
-### Zero Storage
-El flujo completo ocurre en memoria RAM: `cliente → multer.memoryStorage() → OCR → Gemini → respuesta → descarte`. Los metadatos de uso (tipo de documento, tiempo de procesamiento, valoración) se persisten en Supabase — **nunca el contenido del documento**. Cumple con la **Ley 1581 de 2012 (Habeas Data)**.
-
-### Human-in-the-Loop (HITL)
-El sistema es un asistente cognitivo, no un agente autónomo. Toda acción final requiere la validación explícita del usuario desde la interfaz.
-
----
+- Los documentos **sí** se envían a servicios de terceros (Google). "Sin persistencia" describe a DocPilot, no a esos servicios.
+- La validación de archivos es **estructural**: detecta archivos falsificados, truncados o dañados, pero no decodifica cada píxel ni cada objeto interno; esa comprobación final la hace Document AI.
+- Los endpoints de análisis **no tienen autenticación ni límite de peticiones**: cualquiera con acceso a la URL puede consumir cuota de Document AI y Gemini. Para uso público añade autenticación y *rate limiting*.
+- El panel admin usa un único token compartido (sin usuarios, expiración ni bloqueo por intentos).
+- Los resultados de la IA pueden contener errores; por eso existe el paso de revisión humana. No sustituyen asesoría legal ni contable.
+- No se incluye una licencia; define la que corresponda antes de aceptar contribuciones externas.
 
 ## Autor
 
-**Mario Andrés Jácome Mantilla**
-Proyecto de Grado — Unidades Tecnológicas de Santander (UTS)
-Directora: Yuli Andrea Álvarez Pizarro
+**Mario Andrés Jácome** — [@mandresjacome](https://github.com/mandresjacome)

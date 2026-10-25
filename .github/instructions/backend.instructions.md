@@ -1,5 +1,5 @@
 ---
-description: "Usa cuando: escribas o revises archivos del backend de Express (rutas, controladores, servicios, middlewares). Cubre: Zero Storage con multer, validación de archivos en entrada, manejo de errores asíncronos, estructura modular de carpetas y convenciones de nombrado."
+description: "Usa cuando: escribas o revises archivos del backend de Express (rutas, controladores, servicios, middlewares). Cubre: recepción de archivos en memoria con multer (sin persistencia de documentos), validación de archivos en entrada, manejo de errores asíncronos, estructura modular de carpetas y convenciones de nombrado."
 applyTo: ["backend/**", "server/**", "src/backend/**", "src/server/**"]
 ---
 
@@ -16,7 +16,9 @@ backend/
 └── app.js         # Configuración central de Express
 ```
 
-## Recepción de Archivos — Zero Storage (Obligatorio)
+## Recepción de Archivos — Sin persistencia de documentos (Obligatorio)
+
+Los documentos no se guardan en disco ni en base de datos propia. Ojo: eso **no** significa que ningún tercero los reciba; Google Document AI y Gemini procesan el contenido (ver `docs/DATOS_Y_PRIVACIDAD.md`).
 
 - Usar **siempre** `multer.memoryStorage()`. Jamás `dest` ni `diskStorage`.
 - El buffer (`req.file.buffer`) se pasa directamente al servicio OCR y se descarta tras su uso.
@@ -37,6 +39,7 @@ Toda ruta que reciba archivos debe validar antes de procesar:
 
 - **Tipos permitidos:** `application/pdf`, `image/png`, `image/jpeg`, `image/tiff`.
 - **Tamaño máximo:** 10 MB (`limits: { fileSize: 10 * 1024 * 1024 }`).
+- **Contenido real:** el MIME declarado no basta. `services/validacionArchivo.service.js` comprueba extensión, firma (magic bytes) y estructura del archivo; `middlewares/validarArchivo.js` ya lo invoca.
 - Rechazar con `400 Bad Request` si el archivo no cumple, con mensaje descriptivo en español.
 
 ```js

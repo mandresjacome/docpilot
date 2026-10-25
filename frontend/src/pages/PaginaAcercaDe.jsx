@@ -37,7 +37,7 @@ const TECNOLOGIAS = [
     categoria: 'Base de Datos',
     icono: '🗄️',
     items: [
-      { nombre: 'Supabase (PostgreSQL)', descripcion: 'Almacena únicamente metadatos de sesión: tipo de documento, tiempo de procesamiento y valoración del usuario. El contenido de los documentos nunca se persiste.' },
+      { nombre: 'Supabase (PostgreSQL)', descripcion: 'Almacena únicamente metadatos de uso: tipo de documento, tiempo de procesamiento, confirmación y, si el usuario la envía, su valoración y comentario. El contenido de los documentos no se guarda.' },
     ],
   },
   {
@@ -187,9 +187,10 @@ const PaginaAcercaDe = () => {
         <div className="arq-leyenda">
           <span className="arq-leyenda-icono">🔒</span>
           <span>
-            <strong>Política Zero Storage:</strong> los documentos se procesan exclusivamente
-            en memoria RAM y se descartan tras el análisis. Ningún archivo se persiste
-            en disco, base de datos ni nube. Cumple la Ley 1581 de 2012 (Habeas Data).
+            <strong>Sin persistencia de documentos:</strong> los archivos se procesan en la memoria
+            del servidor y no se guardan en disco ni en base de datos de DocPilot. Para analizarlos
+            se envían a Google Document AI (archivo) y Gemini (texto extraído), servicios de terceros
+            fuera del control de esta aplicación.
           </span>
         </div>
       </section>
@@ -246,8 +247,8 @@ const PaginaAcercaDe = () => {
         <div className="principios-grid">
           <div className="principio-item">
             <span className="principio-icono">🔒</span>
-            <strong>Zero Storage</strong>
-            <p>Los documentos nunca se almacenan. Solo existen en RAM durante el procesamiento y se descartan inmediatamente.</p>
+            <strong>Sin persistencia de documentos</strong>
+            <p>Los documentos se procesan en la memoria del servidor y no se guardan en disco ni en base de datos de DocPilot. Para el análisis se envían a Google Document AI y Gemini, que son servicios de terceros.</p>
           </div>
           <div className="principio-item">
             <span className="principio-icono">👤</span>
@@ -257,12 +258,12 @@ const PaginaAcercaDe = () => {
           <div className="principio-item">
             <span className="principio-icono">🛡️</span>
             <strong>Privacidad por Diseño</strong>
-            <p>El contenido documental no se guarda en DocPilot, aunque se envía a Google Document AI y Gemini para analizarlo. Los metadatos de uso se registran únicamente con consentimiento explícito y no incluyen correo ni datos de contacto, conforme a la Ley 1581 de 2012.</p>
+            <p>No se solicita correo ni datos de contacto. Los metadatos de uso se registran únicamente con consentimiento explícito, a través del aviso de tratamiento de datos (Ley 1581 de 2012).</p>
           </div>
           <div className="principio-item">
             <span className="principio-icono">📊</span>
             <strong>Métricas de Uso</strong>
-            <p>Solo se persisten metadatos de sesión: tipo de documento, tiempo de análisis y valoración voluntaria del usuario. El contenido de los documentos nunca se registra.</p>
+            <p>Solo se guardan metadatos: tipo de documento, tiempo de análisis, confirmación y, si el usuario lo decide, su valoración y comentario. El contenido de los documentos no se guarda.</p>
           </div>
         </div>
       </section>

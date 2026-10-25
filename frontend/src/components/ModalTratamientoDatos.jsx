@@ -43,11 +43,12 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
     setEnviando(true);
 
     try {
-      // Determinar la URL del backend según el entorno de ejecución
-      const baseUrl = import.meta.env.VITE_API_URL || '';
+      // Misma base que el resto de servicios del frontend: VITE_API_URL ya incluye "/api"
+      // (en desarrollo y producción mismo-origen se usa la ruta relativa '/api')
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
       // Registrar la aceptación — el cuerpo va vacío porque no se envían datos personales
-      const respuesta = await fetch(`${baseUrl}/api/visitas/registrar`, {
+      const respuesta = await fetch(`${baseUrl}/visitas/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

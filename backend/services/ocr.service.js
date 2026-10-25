@@ -2,7 +2,7 @@
 // Responsabilidad única: recibir un buffer de archivo en memoria y devolver
 // el texto extraído como string plano.
 // El buffer NUNCA se escribe en disco — se envía directamente a la API de GCP
-// codificado en base64, cumpliendo la regla de Zero Storage.
+// codificado en base64 (sin escribir en disco) y se envía a Google Document AI.
 //
 // ESTRATEGIA DE PAGINACIÓN:
 // Document AI limita a 15 páginas por petición en modo normal. Para documentos
@@ -129,7 +129,7 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
 
 /**
  * dividirPDFEnTrozos — divide un PDF en trozos de máximo maxPaginas páginas.
- * Opera completamente en memoria usando pdf-lib (Zero Storage).
+ * Opera completamente en memoria usando pdf-lib (sin escribir en disco).
  *
  * @param {Buffer} bufferPDF  - Buffer del PDF completo en memoria
  * @param {number} maxPaginas - Máximo de páginas por trozo
