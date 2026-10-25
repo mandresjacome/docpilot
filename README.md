@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/img/logo.png" alt="Logotipo de DocPilot" width="240">
+</p>
+
 # DocPilot
 
 **Asistente de análisis documental con OCR e IA generativa, con revisión humana (Human-in-the-Loop).**
@@ -21,6 +25,7 @@ DocPilot permite cargar un documento (PDF, PNG, JPEG o TIFF), extraer su texto c
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Para desarrolladores](#para-desarrolladores)
 - [Limitaciones conocidas](#limitaciones-conocidas)
+- [Licencia](#licencia)
 
 ## Funcionalidades
 
@@ -234,7 +239,10 @@ docpilot/
 - Los endpoints de análisis **no tienen autenticación ni límite de peticiones**: cualquiera con acceso a la URL puede consumir cuota de Document AI y Gemini. Para uso público añade autenticación y *rate limiting*.
 - El panel admin usa un único token compartido (sin usuarios, expiración ni bloqueo por intentos).
 - Los resultados de la IA pueden contener errores; por eso existe el paso de revisión humana. No sustituyen asesoría legal ni contable.
-- No se incluye una licencia; define la que corresponda antes de aceptar contribuciones externas.
+
+## Licencia
+
+Distribuido bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE).
 
 ## Autor
 

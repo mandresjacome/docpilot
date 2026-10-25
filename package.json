@@ -2,6 +2,12 @@
   "name": "docpilot",
   "version": "1.0.0",
   "description": "DocPilot — Aplicación web con OCR e IA generativa para analizar documentos con revisión humana (monorepo)",
+  "license": "MIT",
+  "author": "Mario Andrés Jácome",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mandresjacome/docpilot.git"
+  },
   "private": true,
   "workspaces": [
     "backend",

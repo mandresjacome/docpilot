@@ -2,6 +2,8 @@
   "name": "docpilot-frontend",
   "version": "1.0.0",
   "description": "DocPilot — Interfaz React para análisis documental con OCR e IA",
+  "license": "MIT",
+  "author": "Mario Andrés Jácome",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

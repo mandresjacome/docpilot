@@ -2,6 +2,8 @@
   "name": "docpilot-backend",
   "version": "1.0.0",
   "description": "DocPilot — API Express para análisis documental con OCR e IA",
+  "license": "MIT",
+  "author": "Mario Andrés Jácome",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
