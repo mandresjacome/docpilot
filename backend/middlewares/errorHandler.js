@@ -6,6 +6,11 @@
 // IMPORTANTE: Express identifica este middleware como manejador de errores
 // por la firma de CUATRO parámetros (err, req, res, next). No omitir ninguno.
 
+// Limpia un texto antes de escribirlo en el log: algunos mensajes (p. ej. el error de un JSON mal
+// formado) incluyen fragmentos de lo que envió el cliente, y los saltos de línea permitirían
+// falsear líneas del log. Se reemplazan los caracteres de control y se acota la longitud.
+const limpiarParaLog = (texto) => String(texto).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500);
+
 const errorHandler = (err, req, res, next) => {
   // Si la respuesta ya empezó a enviarse, Express debe cerrar la conexión por defecto
   if (res.headersSent) return next(err);
@@ -19,9 +24,10 @@ const errorHandler = (err, req, res, next) => {
   // sin este log un error de Supabase o de IA sería invisible en Railway.
   // Nunca se registra el contenido de documentos, solo mensaje y causa técnica.
   if (estado >= 500 || !esProduccion) {
-    console.error(`[Error ${estado}]${err.codigo ? ` (${err.codigo})` : ''}`, err.message);
-    if (err.causa) console.error('  Causa:', err.causa.message || err.causa);
-    if (!esProduccion && err.stack) console.error(err.stack);
+    console.error(`[Error ${estado}]${err.codigo ? ` (${err.codigo})` : ''}`, limpiarParaLog(err.message));
+    if (err.causa) console.error('  Causa:', limpiarParaLog(err.causa.message || err.causa));
+    // El stack completo (varias líneas) solo ayuda a depurar fallos del servidor en desarrollo
+    if (!esProduccion && estado >= 500 && err.stack) console.error(err.stack);
   }
 
   // En producción, un 5xx no controlado (sin `expose`) podría revelar detalles internos

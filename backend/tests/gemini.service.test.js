@@ -5,7 +5,18 @@ jest.mock('@google/genai', () => ({
   GoogleGenAI: jest.fn(() => ({ models: { generateContent: mockGenerar } })),
 }));
 
+const { GoogleGenAI } = require('@google/genai');
 const { analizarTexto } = require('../services/gemini.service');
+
+// El cliente se crea al importar el módulo; se captura aquí porque clearMocks borra las llamadas antes de cada prueba
+const opcionesCliente = GoogleGenAI.mock.calls[0][0];
+
+describe('cliente de Gemini', () => {
+  test('se crea con un timeout para no retener la petición indefinidamente', () => {
+    expect(opcionesCliente.httpOptions.timeout).toBeGreaterThan(0);
+    expect(opcionesCliente.apiKey).toBe(process.env.GEMINI_API_KEY);
+  });
+});
 
 const ANALISIS = {
   tipo: 'Factura de venta',

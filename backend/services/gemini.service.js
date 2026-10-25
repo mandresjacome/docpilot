@@ -17,7 +17,11 @@ const { ErrorApp } = require('../utils/errores');
 
 // Inicializar el cliente de Gemini con la API key del entorno.
 // Se instancia a nivel módulo para reutilizar la conexión en cada petición.
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+  // Sin timeout una llamada colgada retendría la petición indefinidamente
+  httpOptions: { timeout: 90000 },
+});
 
 const MODELO = 'gemini-2.5-flash';
 

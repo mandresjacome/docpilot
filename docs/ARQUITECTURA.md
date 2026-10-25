@@ -106,10 +106,10 @@ Requieren el header `x-admin-token`. Sin token o con token incorrecto → `401`;
 
 | Estado | Códigos | Origen |
 |:------:|---------|--------|
-| 400 | `ARCHIVO_REQUERIDO`, `CAMPO_ARCHIVO_INVALIDO`, `CARGA_INVALIDA`, `ARCHIVO_DEMASIADO_GRANDE`, `TIPO_NO_PERMITIDO`, `EXTENSION_NO_PERMITIDA`, `ARCHIVO_VACIO`, `CONTENIDO_NO_RECONOCIDO`, `CONTENIDO_NO_COINCIDE`, `EXTENSION_NO_COINCIDE`, `ARCHIVO_DANADO` | Validación del archivo |
+| 400 | `ARCHIVO_REQUERIDO`, `CAMPO_ARCHIVO_INVALIDO`, `CARGA_INVALIDA`, `ARCHIVO_DEMASIADO_GRANDE`, `TIPO_NO_PERMITIDO`, `EXTENSION_NO_PERMITIDA`, `ARCHIVO_VACIO`, `CONTENIDO_NO_RECONOCIDO`, `CONTENIDO_NO_COINCIDE`, `EXTENSION_NO_COINCIDE`, `ARCHIVO_DANADO`, `PDF_DEMASIADO_EXTENSO` | Validación del archivo |
 | 400 | `DATOS_REQUERIDOS`, `REGISTRO_ID_REQUERIDO`, `REGISTRO_ID_INVALIDO`, `ESTRELLAS_INVALIDAS`, `ENCUESTA_INVALIDA` | Validación de cuerpos y parámetros |
 | 404 | `REGISTRO_NO_ENCONTRADO` | El registro no existe |
-| 422 | `PDF_ILEGIBLE`, `OCR_SIN_TEXTO` | El documento no se pudo leer o no tiene texto |
+| 422 | `PDF_ILEGIBLE`, `OCR_SIN_TEXTO`, `PDF_DEMASIADO_EXTENSO` | El documento no se pudo leer, no tiene texto o supera el máximo de páginas (segunda barrera del OCR) |
 | 502 | `OCR_FALLIDO`, `OCR_RESPUESTA_INVALIDA`, `OCR_NO_DISPONIBLE`, `OCR_AUTENTICACION_FALLIDA` | Document AI |
 | 502 | `IA_NO_DISPONIBLE`, `IA_RESPUESTA_VACIA`, `IA_RESPUESTA_INVALIDA` | Gemini |
 | 502 | `PERSISTENCIA_FALLIDA` | Supabase |
@@ -131,7 +131,7 @@ El detalle técnico de los fallos externos (mensajes de Google o de Supabase) **
 1. **multer**: tamaño (10 MB), un único archivo, nombre de campo, MIME permitido.
 2. **`validacionArchivo.service.js`** (sobre el buffer):
    - firma real (`%PDF-`, PNG, JPEG, TIFF) y coincidencia con el MIME declarado y con la extensión;
-   - PDF: marcador `%%EOF` y carga correcta con `pdf-lib` (rechaza cifrados o ilegibles);
+   - PDF: marcador `%%EOF`; **recorrido previo de los flujos comprimidos** (`seguridadPDF.service.js`), que los infla en streaming para contar bytes y rechaza el archivo si un flujo supera 100 MB inflados o el total 200 MB (bomba de descompresión: un PDF de < 1 MB puede inflarse a cientos de MB al parsearlo); carga con `pdf-lib` (rechaza cifrados o ilegibles); máximo **100 páginas** (`PDF_DEMASIADO_EXTENSO`), porque cada 14 páginas es una llamada de pago a Document AI;
    - PNG: chunks, CRC-32 de cada chunk, `IHDR` con dimensiones válidas, `IDAT` y `IEND` sin datos adicionales;
    - JPEG: marcadores, dimensiones en `SOF`, `SOS` y marcador de fin;
    - TIFF: cabecera, directorio, dimensiones y datos de imagen dentro del archivo.
@@ -146,6 +146,21 @@ Es validación **estructural**: no decodifica la imagen completa (eso lo hace Do
 - Métodos: `GET`, `POST`, `DELETE` (el panel admin usa `DELETE`).
 - Headers: `Content-Type` y `x-admin-token`.
 - Sin `*` y sin credenciales. En desarrollo normal no interviene, porque el proxy de Vite evita las solicitudes cross-origin; importa si `VITE_API_URL` apunta directamente a `:3001`.
+
+## Seguridad
+
+Resumen de las defensas implementadas y de sus límites (revisadas en una auditoría de seguridad del repositorio):
+
+| Riesgo | Defensa | Límite |
+|--------|---------|--------|
+| Archivos falsificados o manipulados | Firma real + extensión + estructura (`validacionArchivo.service.js`) | Validación estructural, no decodificación completa |
+| Bomba de descompresión en PDF | Recorrido previo que infla los flujos en streaming con tope por flujo (100 MB) y total (200 MB) | Defensa en profundidad; un PDF diseñado para confundir el recorrido podría evadirla. Usa además límites de memoria del contenedor |
+| Costo por petición (PDF con miles de páginas) | Máximo 100 páginas, validado al cargar y de nuevo antes del OCR | Sin autenticación ni *rate limiting* en los endpoints de análisis |
+| Peticiones colgadas | Timeout de 60 s por llamada a Document AI y de 90 s en Gemini | — |
+| Inyección en logs | El log no escribe datos del cliente; el `errorHandler` sustituye caracteres de control y acota la longitud | — |
+| Acceso al panel admin | Token en header comparado en tiempo constante; 503 si no está configurado; no se acepta por query string | Token único compartido, sin expiración ni bloqueo por intentos |
+| Divulgación de errores | Mensajes seguros por `ErrorApp`; en producción los 5xx no controlados devuelven un mensaje genérico | — |
+| Secretos | `.env` y credenciales ignorados por Git; el historial se revisó sin hallazgos | — |
 
 ## Servicios de IA
 

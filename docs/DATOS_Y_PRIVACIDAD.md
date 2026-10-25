@@ -78,8 +78,8 @@ Puntos a tener en cuenta:
 ## 5. Datos en logs y en el navegador
 
 - **Logs de la aplicación** (salida estándar del servidor):
-  - Una línea `[VISITA] <fecha ISO> | Consentimiento ... ACEPTADO` cuando alguien acepta el aviso. No incluye datos personales y la fecha la genera el servidor.
-  - Los errores 5xx se registran con su mensaje y su causa técnica (por ejemplo, el texto de error de Document AI o de Supabase). **No se registra el contenido de los documentos.**
+  - Una línea `[VISITA] <fecha ISO> | Consentimiento ... ACEPTADO` cuando alguien acepta el aviso, y una línea `[HITL] ... confirmó un análisis` cuando se confirma uno. Ninguna incluye datos personales ni datos enviados por el cliente, y las fechas las genera el servidor.
+  - Los errores 5xx se registran con su mensaje y su causa técnica (por ejemplo, el texto de error de Document AI o de Supabase), con los caracteres de control sustituidos. **No se registra el contenido de los documentos.**
 - **Logs de la plataforma de despliegue** (p. ej. Railway): pueden incluir metadatos de acceso como direcciones IP y rutas. Su retención depende de la plataforma, no de DocPilot.
 - **Navegador:**
   - `localStorage['docpilot_consentimiento_v1']`: bandera booleana de que se aceptó el aviso.

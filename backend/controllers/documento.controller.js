@@ -110,7 +110,8 @@ const confirmar = async (req, res, next) => {
       registroActualizado = true;
     }
 
-    console.log(`[HITL] Usuario confirmó análisis de documento tipo: ${datos.tipo || 'desconocido'}`);
+    // No se registran datos del cliente (datos.tipo es controlable y permitiría falsear líneas del log)
+    console.log(`[HITL] Usuario confirmó un análisis (registro actualizado: ${registroActualizado})`);
 
     // Devolver confirmación al frontend con los datos aprobados.
     // `registroActualizado` indica si la confirmación quedó persistida.

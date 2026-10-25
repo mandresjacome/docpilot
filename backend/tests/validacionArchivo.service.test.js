@@ -2,7 +2,9 @@ const {
   validarContenidoArchivo,
   detectarTipoReal,
   TAMANO_MAXIMO,
+  MAX_PAGINAS_PDF,
 } = require('../services/validacionArchivo.service');
+const zlib = require('zlib');
 const { crearPNG, crearJPEG, crearTIFF, crearPDF, crc32 } = require('./helpers/archivos');
 
 // Atajo: valida y devuelve el código del error (o 'OK' si el archivo fue aceptado)
@@ -14,6 +16,35 @@ const resultado = async (archivo) => {
     return error.codigo;
   }
 };
+
+describe('validarContenidoArchivo — límites de PDF', () => {
+  const pdf = (b) => ({ buffer: b, mimetype: 'application/pdf', originalname: 'a.pdf' });
+
+  test(`acepta un PDF con exactamente ${MAX_PAGINAS_PDF} páginas`, async () => {
+    expect(await resultado(pdf(await crearPDF(MAX_PAGINAS_PDF)))).toBe('OK');
+  });
+
+  test(`rechaza un PDF con más de ${MAX_PAGINAS_PDF} páginas (control de costo)`, async () => {
+    const error = await validarContenidoArchivo(pdf(await crearPDF(MAX_PAGINAS_PDF + 1))).catch((e) => e);
+    expect(error).toMatchObject({ status: 400, codigo: 'PDF_DEMASIADO_EXTENSO' });
+    expect(error.message).toMatch(/101 páginas/);
+  });
+
+  test('rechaza una bomba de descompresión (PDF de < 1 MB que se infla a 120 MB)', async () => {
+    const comprimido = zlib.deflateSync(Buffer.alloc(120 * 1024 * 1024), { level: 9 });
+    const buffer = Buffer.concat([
+      Buffer.from('%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'),
+      Buffer.from(`4 0 obj\n<< /Type /ObjStm /N 1 /First 5 /Filter /FlateDecode /Length ${comprimido.length} >>\nstream\n`),
+      comprimido,
+      Buffer.from('\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n'),
+    ]);
+    expect(buffer.length).toBeLessThan(1024 * 1024);
+
+    const error = await validarContenidoArchivo(pdf(buffer)).catch((e) => e);
+    expect(error).toMatchObject({ status: 400, codigo: 'ARCHIVO_DANADO' });
+    expect(error.message).toMatch(/desproporcionada/);
+  }, 30000);
+});
 
 describe('validarContenidoArchivo — archivos válidos', () => {
   test('acepta un PDF real', async () => {

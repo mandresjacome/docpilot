@@ -8,6 +8,7 @@ jest.mock('@supabase/supabase-js', () => ({
 }));
 
 const request = require('supertest');
+const zlib = require('zlib');
 const app = require('../app');
 const ocr = require('../services/ocr.service');
 const gemini = require('../services/gemini.service');
@@ -112,6 +113,27 @@ describe('POST /api/documentos/analizar — carga y validación de archivos', ()
     const res = await subir(png.subarray(0, png.length - 15));
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('ARCHIVO_DANADO');
+  });
+
+  test('rechaza una bomba de descompresión sin llegar al OCR', async () => {
+    const comprimido = zlib.deflateSync(Buffer.alloc(120 * 1024 * 1024), { level: 9 });
+    const bomba = Buffer.concat([
+      Buffer.from('%PDF-1.5\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'),
+      Buffer.from(`4 0 obj\n<< /Type /ObjStm /N 1 /First 5 /Filter /FlateDecode /Length ${comprimido.length} >>\nstream\n`),
+      comprimido,
+      Buffer.from('\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n'),
+    ]);
+    const res = await subir(bomba, { filename: 'bomba.pdf', contentType: 'application/pdf' });
+    expect(res.status).toBe(400);
+    expect(res.body.codigo).toBe('ARCHIVO_DANADO');
+    expect(ocr.extraerTexto).not.toHaveBeenCalled();
+  }, 30000);
+
+  test('rechaza un PDF con más de 100 páginas sin llegar al OCR', async () => {
+    const res = await subir(await crearPDF(101), { filename: 'enorme.pdf', contentType: 'application/pdf' });
+    expect(res.status).toBe(400);
+    expect(res.body.codigo).toBe('PDF_DEMASIADO_EXTENSO');
+    expect(ocr.extraerTexto).not.toHaveBeenCalled();
   });
 
   test('rechaza una extensión no permitida', async () => {
@@ -252,6 +274,31 @@ describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
     supabaseMock.responder({ data: [] });
     const res = await confirmar({ datos: ANALISIS, registroId: ID });
     expect(res.status).toBe(404);
+  });
+
+  test('no escribe en el log datos controlados por el cliente (evita falsear líneas)', async () => {
+    supabaseMock.responder({ data: [{ id: ID }] });
+    const inyeccion = 'factura\n[Error 500] (PERSISTENCIA_FALLIDA) línea falsa';
+
+    await confirmar({ datos: { tipo: inyeccion }, registroId: ID });
+
+    const log = console.log.mock.calls.flat().join('\n');
+    expect(log).toMatch(/\[HITL\]/);
+    expect(log).not.toContain('línea falsa');
+  });
+
+  test('un JSON mal formado con saltos de línea no puede falsear el log de errores', async () => {
+    console.error.mockClear();
+    const res = await request(app)
+      .post('/api/documentos/confirmar')
+      .set('Content-Type', 'application/json')
+      .send('{"datos": "a\n[Error 500] (X) falsa"');
+
+    expect(res.status).toBe(400);
+    // ninguna línea de log puede contener un salto de línea provocado por el cliente
+    for (const argumentos of console.error.mock.calls) {
+      for (const argumento of argumentos) expect(String(argumento)).not.toMatch(/[\r\n]/);
+    }
   });
 
   test('responde 400 si no se envían datos o si el registroId no es un UUID', async () => {

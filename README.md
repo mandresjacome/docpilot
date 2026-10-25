@@ -24,7 +24,7 @@ DocPilot permite cargar un documento (PDF, PNG, JPEG o TIFF), extraer su texto c
 
 ## Funcionalidades
 
-- **Carga y validación de archivos** — PDF, PNG, JPEG y TIFF de hasta 10 MB. El backend valida el MIME declarado, la extensión, la firma real del contenido y la estructura del archivo (rechaza vacíos, truncados, corruptos o con el tipo falsificado).
+- **Carga y validación de archivos** — PDF, PNG, JPEG y TIFF de hasta 10 MB. El backend valida el MIME declarado, la extensión, la firma real del contenido y la estructura del archivo (rechaza vacíos, truncados, corruptos o con el tipo falsificado). En PDF además limita a **100 páginas** (control de costo) y rechaza "bombas de descompresión".
 - **OCR** con Google Cloud Document AI. Los PDF de más de 14 páginas se dividen automáticamente en memoria (`pdf-lib`) para respetar el límite de la API.
 - **Clasificación y análisis en dos fases** con Gemini 2.5 Flash: primero se identifica la categoría (`contrato`, `factura`, `pqrs`, `documento_judicial`, `carta`, `cotizacion`, `otro`) y luego se aplica un prompt especializado que extrae los campos relevantes de esa categoría.
 - **Human-in-the-Loop** — la IA solo propone. El usuario revisa el resultado junto al documento (vista dividida) y lo confirma explícitamente. El texto del botón cambia según el tipo de documento (*sugerencia de respuesta* o *recomendación de acción*).
@@ -165,7 +165,7 @@ npm run test:coverage --workspace=backend  # con informe de cobertura
 
 La suite usa **Jest + Supertest** y **simula todos los servicios externos** (Supabase, Document AI, Gemini): no consume cuotas ni necesita credenciales. Cubre:
 
-- Carga y validación de archivos (firmas, extensión, tamaño, archivos vacíos, truncados o manipulados).
+- Carga y validación de archivos (firmas, extensión, tamaño, archivos vacíos, truncados o manipulados, bombas de descompresión y tope de 100 páginas en PDF).
 - OCR: división de PDF, errores de Document AI, respuestas inválidas.
 - IA: clasificación, limpieza del JSON, respuestas vacías o mal formadas, fallos de la API.
 - Registro en Supabase: éxito, errores devueltos y excepciones de red, ausencia de datos de contacto.
@@ -203,7 +203,8 @@ docpilot/
 │   │   ├── ocr.service.js          # Google Document AI
 │   │   ├── gemini.service.js       # clasificación y análisis con Gemini
 │   │   ├── supabase.service.js     # persistencia de metadatos (errores tipados)
-│   │   └── validacionArchivo.service.js  # firma, extensión y estructura de archivos
+│   │   ├── validacionArchivo.service.js  # firma, extensión, estructura y tope de páginas
+│   │   └── seguridadPDF.service.js # defensa contra bombas de descompresión en PDF
 │   ├── middlewares/                # validarArchivo (multer + validación), errorHandler
 │   ├── utils/errores.js            # ErrorApp (estado HTTP + código estable) y esUUID
 │   └── tests/                      # Jest + Supertest, con helpers y mocks
@@ -228,7 +229,8 @@ docpilot/
 ## Limitaciones conocidas
 
 - Los documentos **sí** se envían a servicios de terceros (Google). "Sin persistencia" describe a DocPilot, no a esos servicios.
-- La validación de archivos es **estructural**: detecta archivos falsificados, truncados o dañados, pero no decodifica cada píxel ni cada objeto interno; esa comprobación final la hace Document AI.
+- La validación de archivos es **estructural**: detecta archivos falsificados, truncados o dañados, pero no decodifica cada píxel ni cada objeto interno; esa comprobación final la hace Document AI. La defensa contra bombas de descompresión en PDF es una defensa en profundidad, no una garantía absoluta: en una exposición pública combínala con límites de memoria del contenedor y *rate limiting*.
+- Los PDF están limitados a 100 páginas por documento.
 - Los endpoints de análisis **no tienen autenticación ni límite de peticiones**: cualquiera con acceso a la URL puede consumir cuota de Document AI y Gemini. Para uso público añade autenticación y *rate limiting*.
 - El panel admin usa un único token compartido (sin usuarios, expiración ni bloqueo por intentos).
 - Los resultados de la IA pueden contener errores; por eso existe el paso de revisión humana. No sustituyen asesoría legal ni contable.

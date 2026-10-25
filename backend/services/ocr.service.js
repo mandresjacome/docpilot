@@ -16,6 +16,7 @@ const https = require('https');
 const { GoogleAuth } = require('google-auth-library');
 const { PDFDocument } = require('pdf-lib');
 const { ErrorApp } = require('../utils/errores');
+const { MAX_PAGINAS_PDF } = require('./validacionArchivo.service');
 
 // En producción (Railway), las credenciales de GCP vienen como variable de entorno
 // GOOGLE_CREDENTIALS_JSON con el contenido completo del JSON de la cuenta de servicio.
@@ -45,6 +46,9 @@ const NOMBRE_PROCESADOR = `projects/${process.env.DOCUMENT_AI_PROJECT_ID}/locati
 // Límite de páginas por petición impuesto por Document AI en modo normal.
 // Se usa 14 en lugar de 15 como margen de seguridad ante conteos internos de la API.
 const LIMITE_PAGINAS = 14;
+
+// Tiempo máximo de espera por cada llamada a Document AI (ms)
+const TIMEOUT_OCR_MS = 60000;
 
 /**
  * enviarChunkOCR — envía UN buffer (≤ LIMITE_PAGINAS páginas) a Document AI.
@@ -82,6 +86,7 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
         hostname,
         path: rutaEndpoint,
         method: 'POST',
+        timeout: TIMEOUT_OCR_MS, // evita que una petición colgada retenga la solicitud indefinidamente
         headers: {
           'Authorization': `Bearer ${token}`,          // Token OAuth2 de GCP
           'Content-Type': 'application/json',           // Body en formato JSON
@@ -116,28 +121,28 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
       }
     );
 
-    // Errores de red (timeout, DNS, conexión rechazada, etc.)
+    // Errores de red (DNS, conexión rechazada, etc.)
     req.on('error', (errorRed) => reject(new ErrorApp('No se pudo conectar con el servicio de OCR. Intenta de nuevo.', {
       status: 502,
       codigo: 'OCR_NO_DISPONIBLE',
       causa: errorRed,
     })));
+    // Inactividad del socket: destruir la petición dispara 'error' (OCR_NO_DISPONIBLE)
+    req.on('timeout', () => req.destroy(new Error(`Document AI no respondió en ${TIMEOUT_OCR_MS} ms`)));
     req.write(cuerpo);       // Escribir el body JSON en la petición
     req.end();               // Finalizar y enviar la petición
   });
 };
 
 /**
- * dividirPDFEnTrozos — divide un PDF en trozos de máximo maxPaginas páginas.
+ * dividirPDFEnTrozos — divide un PDF ya cargado en trozos de máximo maxPaginas páginas.
  * Opera completamente en memoria usando pdf-lib (sin escribir en disco).
  *
- * @param {Buffer} bufferPDF  - Buffer del PDF completo en memoria
- * @param {number} maxPaginas - Máximo de páginas por trozo
- * @returns {Promise<Buffer[]>} - Array de buffers, uno por trozo
+ * @param {PDFDocument} docFuente - Documento ya cargado (así no se vuelve a parsear el archivo)
+ * @param {number} maxPaginas     - Máximo de páginas por trozo
+ * @returns {Promise<Buffer[]>}   - Array de buffers, uno por trozo
  */
-const dividirPDFEnTrozos = async (bufferPDF, maxPaginas) => {
-  // Cargar el PDF fuente en memoria con pdf-lib
-  const docFuente = await PDFDocument.load(bufferPDF);
+const dividirPDFEnTrozos = async (docFuente, maxPaginas) => {
   const totalPaginas = docFuente.getPageCount();
   const trozos = [];
 
@@ -201,9 +206,10 @@ const extraerTexto = async (buffer, mimeType) => {
     // Para PDFs, verificar el número de páginas antes de enviar a Document AI.
     // Si el PDF no se puede interpretar se rechaza como documento inválido (422)
     // en lugar de dejar que falle como error interno del servidor.
+    let docPDF;
     let totalPaginas;
     try {
-      const docPDF = await PDFDocument.load(buffer);
+      docPDF = await PDFDocument.load(buffer);
       totalPaginas = docPDF.getPageCount();
     } catch (errorPDF) {
       throw new ErrorApp('El PDF está dañado, protegido o no se puede leer.', {
@@ -213,10 +219,18 @@ const extraerTexto = async (buffer, mimeType) => {
       });
     }
 
+    // Segunda barrera (la primera es la validación de carga): cada 14 páginas es una llamada de pago
+    if (totalPaginas > MAX_PAGINAS_PDF) {
+      throw new ErrorApp(`El PDF tiene ${totalPaginas} páginas y el máximo permitido es ${MAX_PAGINAS_PDF}.`, {
+        status: 422,
+        codigo: 'PDF_DEMASIADO_EXTENSO',
+      });
+    }
+
     if (totalPaginas > LIMITE_PAGINAS) {
       // El PDF supera el límite — dividir en trozos y procesar cada uno
       // Cada trozo tiene como máximo LIMITE_PAGINAS páginas
-      const trozos = await dividirPDFEnTrozos(buffer, LIMITE_PAGINAS);
+      const trozos = await dividirPDFEnTrozos(docPDF, LIMITE_PAGINAS);
 
       // Procesar los trozos en secuencia para evitar sobrecargar la cuota de la API
       const textosPorTrozo = [];

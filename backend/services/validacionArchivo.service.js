@@ -11,9 +11,14 @@
 const path = require('path');
 const { PDFDocument } = require('pdf-lib');
 const { ErrorApp } = require('../utils/errores');
+const { verificarExpansionPDF } = require('./seguridadPDF.service');
 
 // Tamaño máximo permitido: 10 MB (límite vigente del sistema)
 const TAMANO_MAXIMO = 10 * 1024 * 1024;
+
+// Páginas máximas por PDF. Un PDF diminuto puede declarar decenas de miles de páginas y cada 14
+// generarían una llamada de pago a Document AI; 100 páginas (≈ 8 llamadas) cubre documentos reales.
+const MAX_PAGINAS_PDF = 100;
 
 // Formatos admitidos: MIME → etiqueta legible y extensiones válidas
 const TIPOS_PERMITIDOS = {
@@ -188,12 +193,26 @@ const validarPDF = async (buffer) => {
   if (!buffer.subarray(Math.max(0, buffer.length - 2048)).includes('%%EOF')) {
     return 'el PDF está incompleto (sin marcador de fin de archivo)';
   }
+
+  // Antes de que pdf-lib decodifique nada: descartar bombas de descompresión
+  const motivoExpansion = await verificarExpansionPDF(buffer);
+  if (motivoExpansion) return `el PDF ${motivoExpansion}`;
+
+  let documento;
+  let paginas;
   try {
-    // pdf-lib falla con PDFs cifrados o cuya estructura no se puede interpretar
-    const documento = await PDFDocument.load(buffer, { updateMetadata: false });
-    if (documento.getPageCount() < 1) return 'el PDF no contiene páginas';
+    // pdf-lib falla con PDFs cifrados o cuya estructura no se puede interpretar; con una estructura
+    // dañada también puede fallar al leer el catálogo (getPageCount), por eso va dentro del try
+    documento = await PDFDocument.load(buffer, { updateMetadata: false });
+    paginas = documento.getPageCount();
   } catch {
     return 'el PDF está protegido con contraseña o no se puede leer';
+  }
+
+  if (paginas < 1) return 'el PDF no contiene páginas';
+  // Cada 14 páginas supone una llamada de pago a Document AI: se acota el costo por petición
+  if (paginas > MAX_PAGINAS_PDF) {
+    throw rechazar(`El PDF tiene ${paginas} páginas y el máximo permitido es ${MAX_PAGINAS_PDF}.`, 'PDF_DEMASIADO_EXTENSO');
   }
   return null;
 };
@@ -270,4 +289,5 @@ module.exports = {
   detectarTipoReal,
   TIPOS_PERMITIDOS,
   TAMANO_MAXIMO,
+  MAX_PAGINAS_PDF,
 };

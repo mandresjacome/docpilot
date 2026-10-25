@@ -16,13 +16,16 @@ const { crearPNG, crearPDF } = require('./helpers/archivos');
 
 // Simula una respuesta HTTP de Document AI; devuelve los cuerpos enviados para inspeccionarlos.
 // `cuerpo` puede ser un objeto/string fijo o una función (indice) => objeto para variar por petición.
-const simularDocumentAI = ({ estado = 200, cuerpo = { document: { text: 'texto' } }, errorRed } = {}) => {
+const simularDocumentAI = ({ estado = 200, cuerpo = { document: { text: 'texto' } }, errorRed, inactividad } = {}) => {
   const enviados = [];
   https.request.mockImplementation((opciones, alResponder) => {
     const indice = enviados.length;
     const req = new EventEmitter();
     req.write = (contenido) => enviados.push({ opciones, contenido });
+    // Igual que http.ClientRequest: destruir con un error provoca el evento 'error'
+    req.destroy = (error) => process.nextTick(() => req.emit('error', error));
     req.end = () => {
+      if (inactividad) return process.nextTick(() => req.emit('timeout'));
       if (errorRed) return process.nextTick(() => req.emit('error', errorRed));
       const res = new EventEmitter();
       res.statusCode = estado;
@@ -81,6 +84,36 @@ describe('extraerTexto — flujo normal', () => {
       paginas.push(pdf.getPageCount());
     }
     expect(paginas).toEqual([14, 14, 2]);
+  });
+});
+
+describe('extraerTexto — control de costo y tiempos', () => {
+  test('rechaza con 422 un PDF de más de 100 páginas y no llama a Document AI', async () => {
+    const enviados = simularDocumentAI();
+    await expect(extraerTexto(await crearPDF(101), 'application/pdf')).rejects.toMatchObject({
+      status: 422,
+      codigo: 'PDF_DEMASIADO_EXTENSO',
+    });
+    expect(enviados).toHaveLength(0);
+  });
+
+  test('un PDF de 100 páginas se procesa en 8 llamadas (14×7 + 2)', async () => {
+    const enviados = simularDocumentAI();
+    await extraerTexto(await crearPDF(100), 'application/pdf');
+    expect(enviados).toHaveLength(8);
+  });
+
+  test('cada llamada a Document AI lleva un timeout configurado', async () => {
+    const enviados = simularDocumentAI();
+    await extraerTexto(crearPNG(), 'image/png');
+    expect(enviados[0].opciones.timeout).toBe(60000);
+  });
+
+  test('si Document AI no responde (timeout) se traduce a 502 OCR_NO_DISPONIBLE', async () => {
+    simularDocumentAI({ inactividad: true });
+    const error = await extraerTexto(crearPNG(), 'image/png').catch((e) => e);
+    expect(error).toMatchObject({ status: 502, codigo: 'OCR_NO_DISPONIBLE' });
+    expect(error.causa.message).toMatch(/no respondió/);
   });
 });
 
