@@ -49,7 +49,6 @@ const analizar = async (req, res, next) => {
         tipo_documento: analisis.tipo || 'desconocido',
         tiempo_ms:      tiempoMs,
         confirmado:     false, // se actualiza a true cuando el usuario confirme (HITL)
-        correo_usuario: req.headers['x-correo-usuario'] || null,
       });
       registroId = data.id;
     } catch (errorGuardado) {

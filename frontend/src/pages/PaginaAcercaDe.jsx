@@ -257,7 +257,7 @@ const PaginaAcercaDe = () => {
           <div className="principio-item">
             <span className="principio-icono">🛡️</span>
             <strong>Privacidad por Diseño</strong>
-            <p>El contenido documental no se persiste. El correo y metadatos de sesión se registran únicamente con consentimiento explícito, conforme a la Ley 1581 de 2012.</p>
+            <p>El contenido documental no se guarda en DocPilot, aunque se envía a Google Document AI y Gemini para analizarlo. Los metadatos de uso se registran únicamente con consentimiento explícito y no incluyen correo ni datos de contacto, conforme a la Ley 1581 de 2012.</p>
           </div>
           <div className="principio-item">
             <span className="principio-icono">📊</span>

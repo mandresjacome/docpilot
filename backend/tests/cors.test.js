@@ -79,7 +79,7 @@ describe('CORS — restricciones (no es excesivamente permisivo)', () => {
   });
 
   test('solo se permiten los headers que usa la aplicación', () => {
-    expect(opcionesCors.allowedHeaders).toEqual(['Content-Type', 'x-admin-token', 'x-correo-usuario']);
+    expect(opcionesCors.allowedHeaders).toEqual(['Content-Type', 'x-admin-token']);
   });
 
   test('las respuestas reales a un origen permitido incluyen el header CORS', async () => {

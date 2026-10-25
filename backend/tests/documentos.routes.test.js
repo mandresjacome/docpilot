@@ -149,10 +149,12 @@ describe('POST /api/documentos/analizar — procesamiento y registro', () => {
     expect(insertado).not.toMatch(/texto extraído|resumen|Cobro/);
   });
 
-  test('guarda el correo si el cliente envía el header x-correo-usuario', async () => {
+  test('no guarda datos de contacto: ignora el header x-correo-usuario', async () => {
     supabaseMock.responder({ data: { id: ID } });
     await subir().set('x-correo-usuario', 'ana@example.com');
-    expect(supabaseMock.llamo('insert')[0].args[0][0].correo_usuario).toBe('ana@example.com');
+    const insertado = supabaseMock.llamo('insert')[0].args[0][0];
+    expect(insertado).not.toHaveProperty('correo_usuario');
+    expect(JSON.stringify(insertado)).not.toContain('ana@example.com');
   });
 
   test('si el guardado en Supabase falla: análisis entregado pero con guardado=false y advertencia explícita', async () => {

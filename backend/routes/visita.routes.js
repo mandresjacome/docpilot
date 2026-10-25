@@ -7,7 +7,7 @@ const router = express.Router();
 const { registrarVisita } = require('../controllers/visita.controller');
 
 // POST /api/visitas/registrar
-// Endpoint que recibe el correo y la aceptación del tratamiento de datos.
+// Endpoint que registra la aceptación del tratamiento de datos (sin datos personales).
 // Solo genera un log en consola — nunca escribe a disco ni a base de datos.
 router.post('/registrar', registrarVisita);
 

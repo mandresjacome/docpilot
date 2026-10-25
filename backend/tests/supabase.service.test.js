@@ -20,14 +20,19 @@ describe('registrarUsoConRetorno', () => {
       tipo_documento: 'factura',
       tiempo_ms: 1200,
       confirmado: false,
-      correo_usuario: 'ana@example.com',
     });
 
     expect(data).toEqual({ id: ID });
     expect(supabaseMock.llamo('from')[0].args).toEqual(['registros_uso']);
     expect(supabaseMock.llamo('insert')[0].args[0]).toEqual([
-      { tipo_documento: 'factura', tiempo_ms: 1200, confirmado: false, correo_usuario: 'ana@example.com' },
+      { tipo_documento: 'factura', tiempo_ms: 1200, confirmado: false },
     ]);
+  });
+
+  test('nunca escribe datos de contacto, aunque se los pasen', async () => {
+    supabaseMock.responder({ data: { id: ID } });
+    await servicio.registrarUsoConRetorno({ tipo_documento: 'carta', correo_usuario: 'ana@example.com' });
+    expect(supabaseMock.llamo('insert')[0].args[0][0]).not.toHaveProperty('correo_usuario');
   });
 
   test('aplica valores por defecto cuando faltan datos', async () => {
@@ -37,7 +42,6 @@ describe('registrarUsoConRetorno', () => {
       tipo_documento: 'desconocido',
       tiempo_ms: null,
       confirmado: false,
-      correo_usuario: null,
     });
   });
 

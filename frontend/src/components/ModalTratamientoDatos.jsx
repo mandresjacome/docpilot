@@ -1,27 +1,22 @@
 // Modal de Tratamiento de Datos.
 // Aparece la primera vez que el usuario accede al aplicativo.
-// Propósito: informar sobre el tratamiento de datos personales conforme a la
-// Ley 1581 de 2012 (Colombia) y recoger el consentimiento explícito.
+// Propósito: informar sobre el tratamiento de datos conforme a la Ley 1581 de 2012
+// (Colombia) y recoger la aceptación explícita.
 //
-// IMPORTANTE — Zero Storage: el correo NO se guarda en ninguna base de datos
-// ni archivo. Solo se envía al backend para que quede registrado en los logs
-// del servidor de despliegue. En el cliente se guarda únicamente una bandera
-// booleana en localStorage ('docpilot_consentimiento_v1') para no mostrar el modal
-// en cada visita posterior del mismo navegador.
+// PRIVACIDAD: el modal NO pide ni recoge datos personales (ni correo ni nombre).
+// Solo registra que se aceptó el tratamiento: el backend deja una línea de log sin
+// datos personales y el cliente guarda únicamente una bandera booleana en localStorage
+// ('docpilot_consentimiento_v1') para no mostrar el modal en cada visita del mismo navegador.
 
 import React, { useState } from 'react';
 
 /**
  * ModalTratamientoDatos
  * Props:
- *   - onAceptar(correo): función del padre que se llama cuando el usuario
- *     acepta el tratamiento de datos. Recibe el correo como argumento.
+ *   - onAceptar: función del padre que se llama cuando el usuario acepta el tratamiento.
  *   - onCerrar: función del padre que se llama si el usuario decide saltar el formulario.
  */
 const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
-  // Correo electrónico ingresado por el usuario
-  const [correo, setCorreo] = useState('');
-
   // Control del checkbox de aceptación de la política de tratamiento
   const [aceptado, setAceptado] = useState(false);
 
@@ -32,19 +27,12 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
   const [error, setError] = useState(null);
 
   /**
-   * manejarEnvio — valida los campos y envía el registro al backend.
-   * El backend solo genera un log en consola, no almacena datos.
+   * manejarEnvio — valida la aceptación y notifica al backend.
+   * El backend solo genera un log sin datos personales, no almacena nada.
    */
   const manejarEnvio = async (evento) => {
     evento.preventDefault();
     setError(null);
-
-    // Validación del correo en el cliente antes de hacer la petición
-    const regexCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!correo.trim() || !regexCorreo.test(correo.trim())) {
-      setError('Por favor ingresa un correo electrónico válido.');
-      return;
-    }
 
     // El checkbox de aceptación es obligatorio por política de tratamiento de datos
     if (!aceptado) {
@@ -58,14 +46,11 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
       // Determinar la URL del backend según el entorno de ejecución
       const baseUrl = import.meta.env.VITE_API_URL || '';
 
-      // Enviar el registro al backend — solo genera un log, no guarda datos
+      // Registrar la aceptación — el cuerpo va vacío porque no se envían datos personales
       const respuesta = await fetch(`${baseUrl}/api/visitas/registrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          correo: correo.trim(),
-          marcaTiempo: new Date().toISOString(),
-        }),
+        body: JSON.stringify({}),
       });
 
       if (!respuesta.ok) {
@@ -77,8 +62,8 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
       console.warn('[ModalTratamiento] Error de red al registrar visita:', err.message);
     } finally {
       setEnviando(false);
-      // Notificar al componente padre con el correo ingresado
-      onAceptar(correo.trim());
+      // Notificar al componente padre que el usuario aceptó
+      onAceptar();
     }
   };
 
@@ -100,40 +85,26 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
         {/* Texto de la política de tratamiento de datos */}
         <div className="modal-politica">
           <p>
-            La información ingresada en esta plataforma se procesa temporalmente para realizar
-            la extracción de texto y el análisis con inteligencia artificial. El archivo original,
-            el texto extraído y el resultado del análisis <strong>no se almacenan de forma
-            persistente en la infraestructura de DocPilot.</strong>
+            Los documentos que cargues se procesan en la memoria del servidor de DocPilot y
+            <strong> no se guardan en archivos ni en base de datos</strong>. Para analizarlos, el
+            archivo se envía a Google Cloud Document AI (extracción de texto) y el texto extraído
+            a Google Gemini (análisis con IA); ambos son servicios de terceros con sus propias
+            condiciones de tratamiento.
           </p>
           <p style={{ marginTop: '0.6rem' }}>
-            Con tu autorización, el correo electrónico y determinados metadatos de uso se
-            registran únicamente para medir el uso y mejorar la aplicación.
-            No recibirás comunicaciones comerciales.
+            Con tu autorización se registran únicamente metadatos de uso: tipo de documento,
+            tiempo de procesamiento, si confirmaste el análisis y, si la completas, tu valoración
+            y comentario. No se solicita tu correo ni se registra el contenido del documento.
+            Evita incluir datos personales en el comentario. La plataforma de despliegue puede
+            conservar registros técnicos de acceso.
           </p>
           <p style={{ marginTop: '0.6rem' }}>
             Responsable del tratamiento: <strong>Mario Andrés Jácome</strong>, autor de DocPilot.
           </p>
         </div>
 
-        {/* Formulario de registro */}
+        {/* Formulario de aceptación */}
         <form onSubmit={manejarEnvio} noValidate>
-
-          {/* Campo de correo electrónico */}
-          <div className="modal-campo">
-            <label htmlFor="modal-correo" className="modal-label">
-              Correo electrónico
-            </label>
-            <input
-              id="modal-correo"
-              type="email"
-              className="modal-input"
-              placeholder="tu.correo@ejemplo.com"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              disabled={enviando}
-              autoComplete="email"
-            />
-          </div>
 
           {/* Checkbox de aceptación — obligatorio */}
           <label className="modal-checkbox-label">
@@ -146,8 +117,8 @@ const ModalTratamientoDatos = ({ onAceptar, onCerrar }) => {
             />
             <span>
               He leído la información anterior, conozco la finalidad del tratamiento
-              y autorizo el uso de mi correo electrónico y los metadatos de uso para
-              medir el uso y mejorar la aplicación.
+              y autorizo el registro de los metadatos de uso para medir el uso y
+              mejorar la aplicación.
             </span>
           </label>
 

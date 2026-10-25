@@ -15,9 +15,8 @@ const opcionesCors = {
   methods: ['GET', 'POST', 'DELETE'],
 
   // Se listan solo los headers que usa la aplicación en lugar de reflejar cualquiera:
-  // 'x-admin-token' (panel admin) y 'x-correo-usuario' (leído por /analizar).
-  // 'Content-Type' es necesario para los JSON, que provocan preflight.
-  allowedHeaders: ['Content-Type', 'x-admin-token', 'x-correo-usuario'],
+  // 'x-admin-token' (panel admin) y 'Content-Type' (necesario para los JSON, que provocan preflight).
+  allowedHeaders: ['Content-Type', 'x-admin-token'],
 
   // El navegador puede cachear el resultado del preflight 10 minutos
   maxAge: 600,

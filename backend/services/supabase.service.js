@@ -2,7 +2,8 @@
 // Responsabilidad única: proveer el cliente de Supabase y las funciones
 // que insertan metadatos de uso. NUNCA almacena el contenido de documentos
 // ni el texto extraído por OCR — solo metadatos de la interacción
-// (tipo de documento, tiempo, confirmación, valoración y, si el cliente lo envía, el correo).
+// (tipo de documento, tiempo, confirmación y valoración). No se escribe ningún dato de
+// contacto: la columna `correo_usuario` de la tabla, si existe, no se usa.
 //
 // MANEJO DE ERRORES: toda operación que falle (error devuelto por Supabase o excepción
 // de red) lanza un ErrorPersistencia. Ninguna función devuelve éxito si el dato no se
@@ -79,19 +80,17 @@ const ejecutar = async (operacion, consulta) => {
  * @param {string}  datos.tipo_documento   - Tipo detectado por Gemini (contrato, factura, etc.)
  * @param {number}  datos.tiempo_ms        - Milisegundos que tardó el ciclo OCR + Gemini
  * @param {boolean} datos.confirmado       - true si el usuario aprobó el resultado (HITL)
- * @param {string}  [datos.correo_usuario] - Correo asociado a la sesión, si el cliente lo envía
  *
  * @returns {Promise<void>}
  * @throws {ErrorPersistencia} si el registro no pudo guardarse
  */
-const registrarUso = async ({ tipo_documento, tiempo_ms, confirmado, correo_usuario }) => {
+const registrarUso = async ({ tipo_documento, tiempo_ms, confirmado }) => {
   await ejecutar('registrar el uso', () => supabase
     .from('registros_uso')
     .insert([{
       tipo_documento: tipo_documento || 'desconocido',
       tiempo_ms:      tiempo_ms      || null,
       confirmado:     confirmado     || false,
-      correo_usuario: correo_usuario || null,
     }]));
 };
 
@@ -152,14 +151,13 @@ const obtenerEstadisticas = async () => {
  * @returns {Promise<{data: {id: string}}>} - El registro insertado (siempre con id)
  * @throws {ErrorPersistencia} si el registro no pudo guardarse
  */
-const registrarUsoConRetorno = async ({ tipo_documento, tiempo_ms, confirmado, correo_usuario }) => {
+const registrarUsoConRetorno = async ({ tipo_documento, tiempo_ms, confirmado }) => {
   const { data } = await ejecutar('registrar el uso', () => supabase
     .from('registros_uso')
     .insert([{
       tipo_documento: tipo_documento || 'desconocido',
       tiempo_ms:      tiempo_ms      || null,
       confirmado:     confirmado     || false,
-      correo_usuario: correo_usuario || null,
     }])
     .select('id') // Solo necesitamos el id del registro creado
     .single());
