@@ -11,7 +11,7 @@ const { verificarToken, obtenerDashboard, eliminarRegistroAdmin, limpiarRegistro
 router.use(verificarToken);
 
 // GET /api/admin/dashboard
-// Devuelve métricas agregadas y actividad reciente para el panel de la profe
+// Devuelve métricas agregadas y actividad reciente para el panel de administración
 router.get('/dashboard', obtenerDashboard);
 
 // DELETE /api/admin/registros/:id
