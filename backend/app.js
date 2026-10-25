@@ -5,6 +5,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { opcionesCors } = require('./config/cors');
 
 // Importar las rutas del módulo de documentos
 const documentoRoutes = require('./routes/documento.routes');
@@ -25,11 +26,9 @@ const app = express();
 // CORS: solo se habilita en desarrollo local.
 // En producción, Express sirve el frontend desde el mismo origen,
 // por lo que no hay solicitudes cross-origin y CORS no es necesario.
+// La configuración (orígenes, métodos y headers) vive en config/cors.js.
 if (process.env.NODE_ENV !== 'production') {
-  app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:4173'],
-    methods: ['GET', 'POST'],
-  }));
+  app.use(cors(opcionesCors));
 }
 
 // Parsear el cuerpo de las solicitudes JSON
