@@ -13,6 +13,7 @@
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "start:backend": "npm run start --workspace=backend",
+    "test": "npm run test --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build": "npm run build --workspace=frontend",
     "start": "node backend/server.js"

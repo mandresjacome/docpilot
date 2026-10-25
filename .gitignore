@@ -21,6 +21,10 @@ frontend/dist/
 *.log
 npm-debug.log*
 
+# Cobertura de pruebas
+backend/coverage/
+coverage/
+
 # Archivos de deploy alternativos (no utilizados)
 backend/railway.json
 frontend/vercel.json
