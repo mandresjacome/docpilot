@@ -1,0 +1,26 @@
+# Archivos ignorados por Git
+
+# Variables de entorno con credenciales reales (NUNCA al repositorio)
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Credenciales de Google Cloud
+backend/credenciales/
+
+# Dependencias instaladas
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Builds del frontend
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Archivos de deploy alternativos (no utilizados)
+backend/railway.json
+frontend/vercel.json

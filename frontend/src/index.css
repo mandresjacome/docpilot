@@ -1,0 +1,1846 @@
+/* ============================================================
+   Estilos globales — Identidad visual DocPilot
+   Paleta: azul profundo + verde esmeralda
+   ============================================================ */
+
+/* Variables de diseño — Paleta DocPilot */
+:root {
+  --uts-verde:         #0d9e6e;   /* Verde esmeralda — acción principal */
+  --uts-verde-oscuro:  #0a8059;   /* Verde esmeralda oscuro para hover */
+  --uts-verde-claro:   #e6f7f2;   /* Verde esmeralda suave para fondos */
+  --uts-verde-borde:   #6ecdb3;   /* Verde esmeralda para bordes sutiles */
+  --uts-oscuro:        #1e293b;   /* Azul oscuro para texto principal */
+  --uts-gris-medio:    #475569;   /* Gris medio para texto secundario */
+  --uts-gris-claro:    #94a3b8;   /* Gris claro para etiquetas y placeholders */
+  --uts-borde:         #e2e8f0;   /* Borde de tarjetas y separadores */
+  --uts-fondo:         #eef2f7;   /* Fondo general — gris azulado suave para contrastar con header/footer blanco */
+  --uts-blanco:        #ffffff;
+  --uts-error:         #dc2626;
+  --uts-error-fondo:   #fee2e2;
+  --uts-error-borde:   #fca5a5;
+  --app-azul:          #1a4f8a;   /* Azul profundo — header y elementos de marca */
+  --app-azul-oscuro:   #163d6e;   /* Azul profundo oscuro para hover */
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background-color: var(--uts-fondo);
+  color: var(--uts-oscuro);
+  line-height: 1.6;
+}
+
+/* ── Layout general de la aplicación ── */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Cabecera MiDocIA — fondo blanco para que el logo PNG se vea correctamente ── */
+.app-header {
+  background-color: var(--uts-blanco);
+  /* Borde inferior esmeralda — acento de identidad MiDocIA */
+  border-bottom: 4px solid var(--uts-verde);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-contenido {
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-marca {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Logo MiDocIA — PNG sin fondo sobre header blanco, se ve correctamente */
+.logo-uts-img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+/* Separador vertical entre logo y título */
+.header-divisor {
+  width: 2px;
+  height: 32px;
+  background-color: var(--uts-borde);
+  border-radius: 1px;
+}
+
+.header-titulo {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-titulo-principal {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-azul);
+  line-height: 1.2;
+}
+
+.header-titulo-sub {
+  font-size: 0.72rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.3;
+}
+
+/* Badge en la esquina derecha del header */
+.header-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background-color: var(--uts-verde-claro);
+  color: #0a6647;
+  border: 1px solid var(--uts-verde-borde);
+  padding: 0.3rem 0.85rem;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Zona de contenido principal ── */
+.app-main {
+  flex: 1;
+  padding: 2rem 2rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* cada página controla su propio ancho */
+}
+
+main {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Centrador para el formulario de carga — mantiene el form legible
+   sin que se estire en monitores anchos */
+.analisis-form-area {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* ── Tipografía ── */
+h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.3rem;
+}
+
+/* Subtítulo descriptivo debajo del h1 */
+.subtitulo-pagina {
+  font-size: 0.9rem;
+  color: var(--uts-gris-medio);
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--uts-borde);
+}
+
+h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--uts-oscuro);
+  margin-bottom: 1rem;
+  /* Acento verde a la izquierda — igual al portal UTS */
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 1rem;
+  background-color: var(--uts-verde);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Tarjeta genérica ── */
+.card {
+  background: var(--uts-blanco);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--uts-borde);
+}
+
+/* ── Zona de carga del archivo ── */
+.zona-archivo {
+  border: 2px dashed var(--uts-borde);
+  border-radius: 8px;
+  padding: 1.25rem 1rem;
+  background: var(--uts-fondo);
+  transition: border-color 0.2s, background-color 0.2s;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.zona-archivo:hover {
+  border-color: var(--uts-verde);
+  background-color: var(--uts-verde-claro);
+}
+
+/* Ocultar el input nativo del navegador — el label actúa como su reemplazo */
+.input-archivo-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Botón "Seleccionar archivo" en español — imita visualmente un botón secundario */
+.btn-elegir-archivo {
+  display: inline-block;
+  background-color: var(--uts-blanco);
+  color: var(--uts-oscuro);
+  border: 1.5px solid var(--uts-borde);
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-elegir-archivo:hover {
+  border-color: var(--uts-verde);
+  background-color: var(--uts-verde-claro);
+}
+
+/* Texto con el nombre del archivo o "Ningún archivo seleccionado" */
+.nombre-archivo {
+  font-size: 0.85rem;
+  color: var(--uts-gris-medio);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.zona-archivo-info {
+  font-size: 0.78rem;
+  color: var(--uts-gris-claro);
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+/* Etiqueta del input de archivo */
+.input-archivo-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--uts-gris-medio);
+}
+
+.input-archivo {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* ── Botón principal (Analizar) ── */
+.btn-primario {
+  background-color: var(--uts-verde);
+  color: var(--uts-oscuro);
+  border: none;
+  padding: 0.65rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  letter-spacing: 0.01em;
+}
+
+.btn-primario:hover:not(:disabled) {
+  background-color: var(--uts-verde-oscuro);
+}
+
+.btn-primario:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primario:disabled {
+  background-color: var(--uts-verde-claro);
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* ── Botón de confirmación HITL ── */
+.btn-confirmar {
+  background-color: var(--uts-oscuro);
+  color: var(--uts-blanco);
+  border: 2px solid var(--uts-oscuro);
+  padding: 0.65rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  margin-top: 1.25rem;
+  width: 100%;
+  letter-spacing: 0.01em;
+}
+
+.btn-confirmar:hover:not(:disabled) {
+  background-color: var(--uts-verde);
+  border-color: var(--uts-verde);
+  color: var(--uts-oscuro);
+}
+
+.btn-confirmar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Mensajes de estado ── */
+.alerta-error {
+  background-color: var(--uts-error-fondo);
+  color: var(--uts-error);
+  border: 1px solid var(--uts-error-borde);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.alerta-exito {
+  background-color: var(--uts-verde-claro);
+  color: #3d6e06;
+  border: 1px solid var(--uts-verde-borde);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alerta-exito-texto {
+  flex: 1;
+}
+
+/* Botón para volver a analizar otro documento tras confirmar */
+.btn-nuevo-documento {
+  background-color: var(--uts-oscuro);
+  color: var(--uts-blanco);
+  border: none;
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-nuevo-documento:hover {
+  background-color: var(--uts-verde-oscuro);
+}
+
+/* ── Spinner de carga con animación ── */
+.spinner-texto {
+  color: var(--uts-gris-medio);
+  font-size: 0.92rem;
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Círculo giratorio esmeralda MiDocIA */
+.spinner-texto::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid var(--uts-verde-claro);
+  border-top-color: var(--uts-verde);
+  border-radius: 50%;
+  animation: girar 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Ficha de resultado individual ── */
+.ficha-resultado {
+  border: 1px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  background: var(--uts-blanco);
+}
+
+.ficha-resultado h3 {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--uts-gris-claro);
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.ficha-resultado p {
+  color: var(--uts-oscuro);
+  white-space: pre-wrap;
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+/* Indicador de tiempo de procesamiento — aparece bajo el título del análisis */
+.tiempo-analisis {
+  font-size: 0.82rem;
+  color: var(--uts-gris-medio);
+  margin: -0.5rem 0 1rem 0;
+}
+
+/* Badge tipo de documento — verde esmeralda MiDocIA */
+.badge-tipo {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--uts-verde-claro);
+  color: #3d6e06;
+  border-radius: 20px;
+  padding: 0.3rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  border: 1px solid var(--uts-verde-borde);
+}
+
+/* Ficha de alerta urgente — amarillo para fechas críticas */
+.ficha-alerta {
+  border-color: #fcd34d;
+  background-color: #fffbeb;
+}
+
+.ficha-alerta h3 {
+  color: #92400e !important;
+}
+
+.ficha-alerta p {
+  color: #78350f;
+}
+
+/* ── Lista de datos relevantes (dl / dt / dd) ── */
+.lista-datos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dato-item {
+  display: grid;
+  /* Etiqueta ocupa el 38%, valor el resto — adaptable */
+  grid-template-columns: 38% 1fr;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--uts-borde);
+}
+
+.dato-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dato-item dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--uts-gris-medio);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-top: 0.1rem;
+}
+
+.dato-item dd {
+  color: var(--uts-oscuro);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.88rem;
+}
+
+/* Badge IA — indica que el contenido fue generado por inteligencia artificial */
+.badge-ia {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #3d6e06;
+  background: var(--uts-verde-claro);
+  border: 1px solid var(--uts-verde-borde);
+  border-radius: 10px;
+  padding: 0.15rem 0.55rem;
+  margin-left: 0.4rem;
+  text-transform: none;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+/* ── Footer MiDocIA — espeja el estilo de la barra de navegación ── */
+.app-footer {
+  background-color: var(--app-azul);
+  border-top: 3px solid var(--uts-verde);
+  padding: 1.25rem 2rem;
+  text-align: center;
+}
+
+.footer-contenido {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.footer-proyecto {
+  font-size: 0.82rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.footer-creditos {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.footer-autor {
+  font-size: 0.75rem;
+  color: var(--uts-verde);
+  font-weight: 600;
+}
+
+/* ── Responsivo base ── */
+@media (max-width: 540px) {
+  /* Ocultar elementos secundarios del header en pantallas pequeñas */
+  .header-badge { display: none; }
+  .header-titulo-sub { display: none; }
+  .dato-item { grid-template-columns: 1fr; }
+  .app-main { padding: 1rem 0.75rem 2rem; }
+  .analisis-form-area { padding: 0; }
+}
+
+/* ============================================================
+   Navegación por pestañas
+   ============================================================ */
+
+.nav-pestanas {
+  background-color: var(--app-azul);
+  border-bottom: none;
+  padding: 0 2rem;
+}
+
+.nav-pestanas-contenido {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+}
+
+.nav-pestana {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.nav-pestana:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.nav-pestana--activa {
+  background-color: #ffffff;
+  color: var(--app-azul);
+}
+
+.nav-pestana--activa:hover {
+  background-color: #ffffff;
+  color: var(--app-azul);
+}
+
+/* Botón Admin — discreto al final, se adapta al fondo azul */
+.nav-pestana--admin {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.nav-pestana--admin:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Admin activo — mismo pill blanco que las demás pestañas */
+.nav-pestana--admin.nav-pestana--activa {
+  background-color: #ffffff;
+  color: var(--app-azul);
+}
+
+/* ============================================================
+   Modal de Tratamiento de Datos
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.modal-contenido {
+  background: var(--uts-blanco);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--uts-borde);
+}
+
+.modal-encabezado {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.modal-icono {
+  font-size: 2.25rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.modal-encabezado h2 {
+  font-size: 1.1rem;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.5rem;
+}
+
+/* Quitar el acento verde del h2 dentro del modal */
+.modal-encabezado h2::before {
+  display: none;
+}
+
+.modal-subtitulo {
+  font-size: 0.85rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.5;
+}
+
+.modal-politica {
+  background-color: var(--uts-fondo);
+  border: 1px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.84rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.65;
+}
+
+.modal-campo {
+  margin-bottom: 1rem;
+}
+
+.modal-label {
+  display: block;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.4rem;
+}
+
+.modal-input {
+  width: 100%;
+  border: 1.5px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--uts-oscuro);
+  background: var(--uts-blanco);
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.modal-input:focus {
+  border-color: var(--uts-verde);
+  box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
+}
+
+.modal-input:disabled {
+  background: var(--uts-fondo);
+  color: var(--uts-gris-claro);
+}
+
+.modal-checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--uts-oscuro);
+  line-height: 1.5;
+  cursor: pointer;
+  margin-bottom: 1.1rem;
+}
+
+.modal-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--uts-verde);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  cursor: pointer;
+}
+
+.modal-botones {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.btn-modal-saltar {
+  background: none;
+  border: 1.5px solid var(--uts-borde);
+  color: var(--uts-gris-medio);
+  padding: 0.55rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  text-align: center;
+}
+
+.btn-modal-saltar:hover:not(:disabled) {
+  border-color: var(--uts-gris-medio);
+  color: var(--uts-oscuro);
+}
+
+.btn-modal-saltar:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Vista Dividida: documento + análisis
+   ============================================================ */
+
+.vista-dividida-contenedor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  /* Sin max-width: aprovecha el ancho completo del main */
+}
+
+.panel-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.panel-etiqueta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--uts-gris-medio);
+}
+
+.panel-nombre-archivo {
+  font-size: 0.78rem;
+  color: var(--uts-gris-claro);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.panel-documento {
+  background: var(--uts-blanco);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--uts-borde);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+.panel-preview {
+  flex: 1;
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--uts-fondo);
+  border: 1px solid var(--uts-borde);
+  min-height: 0;
+}
+
+.preview-iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 540px;
+  border: none;
+  display: block;
+}
+
+.preview-imagen-contenedor {
+  width: 100%;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.preview-imagen {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+.preview-no-disponible {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  color: var(--uts-gris-medio);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.preview-no-disponible-icono {
+  font-size: 2.5rem;
+}
+
+.panel-analisis {
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+}
+
+.panel-analisis-contenido {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.panel-analisis-contenido .card {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   Página Acerca del Proyecto
+   ============================================================ */
+
+.acerca-contenedor {
+  width: 100%;
+  max-width: 1400px;
+}
+
+.acerca-parrafo {
+  font-size: 0.92rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.75;
+  margin-bottom: 0.5rem;
+}
+
+.acerca-datos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--uts-borde);
+}
+
+.acerca-dato-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.acerca-dato-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--uts-gris-claro);
+}
+
+.acerca-dato-valor {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--uts-oscuro);
+}
+
+/* ── Diagrama de Arquitectura ── */
+.diagrama-arquitectura {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 1.5rem 0;
+}
+
+.arq-nivel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arq-nivel-etiqueta {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--uts-gris-claro);
+}
+
+.arq-capa {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  border: 2px solid;
+  width: 145px;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.arq-capa strong { font-size: 0.84rem; line-height: 1.2; }
+.arq-capa small  { font-size: 0.72rem; opacity: 0.75; }
+.arq-icono       { font-size: 1.4rem; }
+
+.arq-capa-frontend {
+  background-color: var(--uts-verde-claro);
+  border-color: var(--uts-verde-borde);
+  color: #0a6647;
+}
+
+.arq-capa-backend {
+  background-color: #f0f4ff;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.arq-capa-ocr {
+  background-color: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+  margin-bottom: 0.5rem;
+}
+
+.arq-capa-gemini {
+  background-color: #fdf4ff;
+  border-color: #d8b4fe;
+  color: #6b21a8;
+}
+
+.arq-servicios-columna {
+  display: flex;
+  flex-direction: column;
+}
+
+.arq-flecha {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0 0.25rem;
+}
+
+.arq-flecha-texto {
+  font-size: 0.68rem;
+  color: var(--uts-gris-claro);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.arq-flecha-linea {
+  font-size: 1.6rem;
+  color: var(--uts-gris-medio);
+  line-height: 1;
+}
+
+.arq-leyenda {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background-color: var(--uts-verde-claro);
+  border: 1px solid var(--uts-verde-borde);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  color: #3d6e06;
+  line-height: 1.55;
+  margin-top: 0.5rem;
+}
+
+.arq-leyenda-icono {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+/* ── Diagrama de Flujo ── */
+.flujo-contenedor {
+  display: flex;
+  flex-direction: column;
+}
+
+.flujo-paso {
+  display: grid;
+  grid-template-columns: 36px 24px 1fr;
+  gap: 0 0.75rem;
+  align-items: start;
+}
+
+.flujo-numero {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--uts-verde);
+  color: var(--uts-oscuro);
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.flujo-linea-vertical {
+  display: flex;
+  justify-content: center;
+  padding-top: 36px;
+  padding-bottom: 4px;
+}
+
+.flujo-conector {
+  width: 2px;
+  height: 100%;
+  min-height: 20px;
+  background-color: var(--uts-verde-borde);
+  border-radius: 1px;
+}
+
+.flujo-info {
+  padding: 0.45rem 0 1.25rem;
+}
+
+.flujo-titulo {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.25rem;
+}
+
+.flujo-detalle {
+  font-size: 0.84rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.6;
+}
+
+/* ── Stack Tecnológico ── */
+.stack-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.stack-grupo {
+  border: 1px solid var(--uts-borde);
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--uts-fondo);
+}
+
+.stack-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--uts-borde);
+}
+
+.stack-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.stack-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stack-nombre {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--uts-oscuro);
+}
+
+.stack-descripcion {
+  font-size: 0.78rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.4;
+}
+
+/* ── Principios de diseño ── */
+.principios-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.principio-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--uts-borde);
+  border-radius: 10px;
+  background: var(--uts-fondo);
+}
+
+.principio-icono { font-size: 1.5rem; }
+
+.principio-item strong {
+  font-size: 0.9rem;
+  color: var(--uts-oscuro);
+}
+
+.principio-item p {
+  font-size: 0.82rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.55;
+}
+
+/* ── Tipos de documentos soportados ── */
+.tipos-docs-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tipo-doc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--uts-borde);
+  border-radius: 8px;
+  background: var(--uts-fondo);
+}
+
+.tipo-doc-icono {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.tipo-doc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.tipo-doc-nombre {
+  font-size: 0.9rem;
+  color: var(--uts-oscuro);
+}
+
+.tipo-doc-campos {
+  font-size: 0.8rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.5;
+}
+
+/* ── Pruebas realizadas ── */
+.pruebas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.prueba-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--uts-borde);
+  border-radius: 8px;
+  background: var(--uts-fondo);
+}
+
+.prueba-estado {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.prueba-ok {
+  color: #16a34a;
+}
+
+.prueba-error {
+  color: #dc2626;
+}
+
+.prueba-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.prueba-doc {
+  font-size: 0.9rem;
+  color: var(--uts-oscuro);
+}
+
+.prueba-resultado {
+  font-size: 0.8rem;
+  color: var(--uts-gris-medio);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   Responsivo adicional para los nuevos componentes
+   ============================================================ */
+
+@media (max-width: 820px) {
+  .vista-dividida-contenedor {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-documento {
+    min-height: 380px;
+  }
+
+  .preview-iframe {
+    min-height: 360px;
+  }
+
+  .stack-grid,
+  .principios-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diagrama-arquitectura {
+    flex-direction: column;
+  }
+
+  .arq-flecha-linea {
+    transform: rotate(90deg);
+  }
+
+  .acerca-datos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Reducir padding lateral en pantallas medianas */
+  .app-main {
+    padding: 1.5rem 1rem 2.5rem;
+  }
+
+  .nav-pestanas {
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 540px) {
+  .nav-pestana {
+    font-size: 0.8rem;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .modal-contenido {
+    padding: 1.5rem;
+  }
+}
+
+/* ============================================================
+   Botón secundario (compartido por encuesta y admin)
+   ============================================================ */
+
+.btn-secundario {
+  background-color: var(--uts-blanco);
+  color: var(--uts-oscuro);
+  border: 1.5px solid var(--uts-borde);
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.btn-secundario:hover:not(:disabled) {
+  border-color: var(--uts-gris-medio);
+  background-color: var(--uts-fondo);
+}
+
+.btn-secundario:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-pequeno {
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+}
+
+/* Botón de acción destructiva — rojo para borrar registros */
+.btn-peligro {
+  background-color: #dc2626;
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-peligro:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-peligro:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Botón de eliminar individual en cada fila de la tabla */
+.btn-eliminar-fila {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.btn-eliminar-fila:hover:not(:disabled) {
+  opacity: 1;
+  background-color: #fee2e2;
+}
+
+.btn-eliminar-fila:disabled {
+  cursor: not-allowed;
+}
+
+/* Fila de confirmación para limpiar todo */
+.confirmacion-limpiar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.confirmacion-limpiar span {
+  font-size: 0.88rem;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Footer del admin con los botones de acción */
+.admin-footer {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+/* ============================================================
+   Encuesta de Utilidad post-HITL
+   ============================================================ */
+
+.encuesta-card {
+  text-align: center;
+}
+
+.subtitulo-encuesta {
+  font-size: 0.88rem;
+  color: var(--uts-gris-medio);
+  margin-bottom: 1.75rem;
+}
+
+/* ── Estrellas ── */
+.estrellas-container {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.estrella-btn {
+  background: none;
+  border: none;
+  font-size: 2.5rem;
+  cursor: pointer;
+  color: var(--uts-borde);
+  transition: color 0.15s, transform 0.1s;
+  line-height: 1;
+  padding: 0.1rem;
+}
+
+.estrella-btn:hover,
+.estrella-btn.estrella-activa {
+  color: #f59e0b;
+  transform: scale(1.15);
+}
+
+.etiqueta-estrellas {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #92400e;
+  margin-bottom: 1.5rem;
+  min-height: 1.4rem;
+}
+
+/* ── Tiempo ahorrado ── */
+.tiempo-ahorrado-container {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.pregunta-encuesta {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.75rem;
+}
+
+.opciones-tiempo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.opcion-tiempo-btn {
+  background: var(--uts-blanco);
+  border: 1.5px solid var(--uts-borde);
+  color: var(--uts-oscuro);
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.opcion-tiempo-btn:hover {
+  border-color: var(--uts-verde);
+  background-color: var(--uts-verde-claro);
+}
+
+.opcion-tiempo-activa {
+  border-color: var(--uts-verde);
+  background-color: var(--uts-verde-claro);
+  color: #3d6e06;
+  font-weight: 700;
+}
+
+/* ── Comentario ── */
+.comentario-container {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.textarea-comentario {
+  width: 100%;
+  border: 1.5px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.88rem;
+  color: var(--uts-oscuro);
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-top: 0.4rem;
+}
+
+.textarea-comentario:focus {
+  border-color: var(--uts-verde);
+  box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
+}
+
+/* Input de código de documento para el piloto de validación */
+.input-codigo-documento {
+  width: 100%;
+  max-width: 220px;
+  border: 1.5px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.9rem;
+  font-family: 'Courier New', Courier, monospace;
+  color: var(--uts-oscuro);
+  letter-spacing: 0.05em;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-top: 0.4rem;
+  text-transform: uppercase;
+}
+
+.input-codigo-documento:focus {
+  border-color: var(--uts-verde);
+  box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
+}
+
+.texto-opcional {
+  font-size: 0.78rem;
+  color: var(--uts-gris-claro);
+  font-weight: 400;
+}
+
+.contador-caracteres {
+  display: block;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--uts-gris-claro);
+  margin-top: 0.3rem;
+}
+
+/* ── Acciones de la encuesta ── */
+.acciones-encuesta {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.error-encuesta {
+  background-color: var(--uts-error-fondo);
+  color: var(--uts-error);
+  border: 1px solid var(--uts-error-borde);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+/* ============================================================
+   Panel de Administración
+   ============================================================ */
+
+/* ── Pantalla de acceso con token ── */
+.admin-acceso {
+  display: flex;
+  justify-content: center;
+  padding-top: 3rem;
+}
+
+.admin-acceso-card {
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+}
+
+.admin-acceso-card h1 {
+  margin-bottom: 0.4rem;
+}
+
+.admin-form {
+  margin-top: 1.5rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--uts-oscuro);
+  margin-bottom: 0.3rem;
+}
+
+.admin-input {
+  width: 100%;
+  border: 1.5px solid var(--uts-borde);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--uts-oscuro);
+  background: var(--uts-blanco);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.admin-input:focus {
+  border-color: var(--uts-verde);
+  box-shadow: 0 0 0 3px rgba(151, 201, 61, 0.15);
+}
+
+.error-admin {
+  background-color: var(--uts-error-fondo);
+  color: var(--uts-error);
+  border: 1px solid var(--uts-error-borde);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.88rem;
+}
+
+/* ── Dashboard principal ── */
+.admin-dashboard {
+  width: 100%;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-header h1 {
+  margin-bottom: 0;
+}
+
+/* ── Grid de métricas ── */
+.metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metrica-card {
+  background: var(--uts-blanco);
+  border-radius: 12px;
+  padding: 1.25rem 1rem;
+  border: 1px solid var(--uts-borde);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+}
+
+.metrica-numero {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--uts-verde-oscuro);
+  line-height: 1;
+}
+
+.metrica-label {
+  font-size: 0.78rem;
+  color: var(--uts-gris-medio);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ── Secciones del admin ── */
+.admin-seccion h2 {
+  margin-bottom: 1.25rem;
+}
+
+/* ── Barras de distribución ── */
+.distribucion-tipos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tipo-barra-fila {
+  display: grid;
+  grid-template-columns: 1fr 120px 40px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tipo-nombre {
+  font-size: 0.85rem;
+  color: var(--uts-oscuro);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.barra-contenedor {
+  height: 10px;
+  background-color: var(--uts-fondo);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--uts-borde);
+}
+
+.barra-relleno {
+  height: 100%;
+  background-color: var(--uts-verde);
+  border-radius: 5px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.barra-verde {
+  background-color: #34d399;
+}
+
+.tipo-cantidad {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--uts-gris-medio);
+  text-align: right;
+}
+
+/* ── Tabla de actividad reciente ── */
+.tabla-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabla-actividad {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.tabla-actividad th {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 2px solid var(--uts-borde);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--uts-gris-medio);
+  white-space: nowrap;
+}
+
+.tabla-actividad td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--uts-borde);
+  color: var(--uts-oscuro);
+  vertical-align: top;
+}
+
+.tabla-actividad tr:last-child td {
+  border-bottom: none;
+}
+
+.tabla-actividad tr:hover td {
+  background-color: var(--uts-fondo);
+}
+
+.celda-comentario {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--uts-gris-medio) !important;
+  font-style: italic;
+}
+
+.sin-datos {
+  color: var(--uts-gris-claro);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+/* ── Footer del admin ── */
+.admin-footer {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0 2rem;
+}
+
+.cargando-texto {
+  color: var(--uts-gris-medio);
+  font-size: 0.92rem;
+  text-align: center;
+  padding: 3rem 0;
+}
+
+/* ── Responsivo admin ── */
+@media (max-width: 640px) {
+  .tipo-barra-fila {
+    grid-template-columns: 120px 1fr 32px;
+  }
+
+  .metricas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
