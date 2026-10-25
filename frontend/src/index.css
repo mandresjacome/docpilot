@@ -333,6 +333,17 @@ h2::before {
   font-size: 0.9rem;
 }
 
+/* Aviso no bloqueante: el análisis se completó pero algo secundario (el registro de uso) falló */
+.alerta-advertencia {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
 .alerta-exito {
   background-color: var(--uts-verde-claro);
   color: #3d6e06;

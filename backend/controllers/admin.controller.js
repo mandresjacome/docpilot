@@ -1,5 +1,5 @@
 // Controlador del panel de administración.
-// Responsabilidad: exponer los datos de uso del sistema a la profe/admin
+// Responsabilidad: exponer los datos de uso del sistema a la persona administradora
 // de forma protegida mediante un token secreto en los headers.
 //
 // SEGURIDAD:
@@ -7,9 +7,23 @@
 // 'x-admin-token' coincida con la variable de entorno ADMIN_TOKEN.
 // Si no coincide, se devuelve 401 sin revelar si el token existe o no.
 // Nunca se expone este controlador sin el token — los datos de uso
-// son información sensible del proyecto de investigación.
+// son información sensible de la operación.
 
+const crypto = require('crypto');
 const { obtenerEstadisticas, eliminarRegistro, limpiarTodosLosRegistros } = require('../services/supabase.service');
+const { ErrorApp, esUUID } = require('../utils/errores');
+
+/**
+ * tokensCoinciden — compara dos tokens en tiempo constante.
+ * Comparar con `!==` revela, por la duración de la respuesta, cuántos caracteres
+ * iniciales coinciden; timingSafeEqual evita ese canal lateral. Se comparan los
+ * hashes SHA-256 porque timingSafeEqual exige buffers de igual longitud.
+ */
+const tokensCoinciden = (recibido, esperado) => {
+  const hashRecibido = crypto.createHash('sha256').update(String(recibido)).digest();
+  const hashEsperado = crypto.createHash('sha256').update(String(esperado)).digest();
+  return crypto.timingSafeEqual(hashRecibido, hashEsperado);
+};
 
 /**
  * verificarToken — middleware interno que valida el token de administrador.
@@ -24,8 +38,8 @@ const verificarToken = (req, res, next) => {
     return res.status(503).json({ error: 'Panel administrativo no configurado en este entorno.' });
   }
 
-  // Comparación directa del token — no se expone cuál es el valor correcto
-  if (!tokenRecibido || tokenRecibido !== tokenEsperado) {
+  // Comparación en tiempo constante — no se expone cuál es el valor correcto
+  if (!tokenRecibido || !tokensCoinciden(tokenRecibido, tokenEsperado)) {
     return res.status(401).json({ error: 'Acceso no autorizado.' });
   }
 
@@ -121,12 +135,15 @@ const eliminarRegistroAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    if (!id) {
-      const error = new Error('Se requiere el id del registro a eliminar.');
-      error.status = 400;
-      return next(error);
+    // Validar el formato antes de consultar la base de datos
+    if (!esUUID(id)) {
+      return next(new ErrorApp('El identificador del registro no es válido.', {
+        status: 400,
+        codigo: 'REGISTRO_ID_INVALIDO',
+      }));
     }
 
+    // Lanza 404 si no existe y 502 si falla Supabase; ambos llegan al errorHandler
     await eliminarRegistro(id);
     res.status(200).json({ mensaje: 'Registro eliminado correctamente.' });
   } catch (error) {
@@ -137,7 +154,7 @@ const eliminarRegistroAdmin = async (req, res, next) => {
 /**
  * limpiarRegistrosAdmin — DELETE /api/admin/registros
  * Borra todos los registros de la tabla.
- * Uso exclusivo para limpiar datos de prueba antes del piloto formal.
+ * Uso exclusivo para limpiar datos de prueba.
  * Protegido por verificarToken (aplicado a nivel de router).
  */
 const limpiarRegistrosAdmin = async (req, res, next) => {

@@ -80,8 +80,9 @@ const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
   const [error, setError] = useState(null);
 
   /**
-   * manejarEnvio — envía la valoración al backend y luego llama a onFinalizar.
-   * Si el envío falla por error de red, muestra el error pero no bloquea el flujo.
+   * manejarEnvio — envía la valoración al backend y, solo si quedó guardada, llama a onFinalizar.
+   * Si el guardado falla se informa al usuario y se le deja reintentar u omitir la encuesta,
+   * en lugar de mostrar un agradecimiento por una valoración que no se registró.
    */
   const manejarEnvio = async () => {
     // La encuesta requiere al menos las estrellas para ser válida
@@ -116,16 +117,16 @@ const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
       });
 
       if (!respuesta.ok) {
-        // Si el backend falla, lo registramos pero no bloqueamos al usuario
-        console.warn('[Encuesta] Error al enviar la valoración, continuando de todas formas.');
+        const cuerpo = await respuesta.json().catch(() => ({}));
+        throw new Error(cuerpo.error || `Error del servidor: ${respuesta.status}`);
       }
+
+      // Solo con el guardado confirmado por el backend se cierra la sesión
+      onFinalizar();
     } catch (err) {
-      // Error de red — no bloqueamos el flujo, la encuesta es opcional
-      console.warn('[Encuesta] Error de red al enviar:', err.message);
+      setError(`No se pudo guardar tu valoración: ${err.message}. Puedes reintentar u omitir la encuesta.`);
     } finally {
       setEnviando(false);
-      // Independientemente del resultado, finalizar la sesión
-      onFinalizar();
     }
   };
 

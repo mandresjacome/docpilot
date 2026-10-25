@@ -15,6 +15,7 @@ require('dotenv').config();
 const https = require('https');
 const { GoogleAuth } = require('google-auth-library');
 const { PDFDocument } = require('pdf-lib');
+const { ErrorApp } = require('../utils/errores');
 
 // En producción (Railway), las credenciales de GCP vienen como variable de entorno
 // GOOGLE_CREDENTIALS_JSON con el contenido completo del JSON de la cuenta de servicio.
@@ -93,22 +94,34 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
         res.on('end', () => {
           try {
             const respuesta = JSON.parse(datos);
-            // Si Document AI devuelve un error HTTP, propagarlo con mensaje claro
+            // Si Document AI devuelve un error HTTP, se conserva el detalle solo en la causa
+            // (para logs) y al usuario se le muestra un mensaje seguro.
             if (res.statusCode >= 400) {
-              return reject(new Error(
-                respuesta.error?.message || `Error HTTP ${res.statusCode} de Document AI`
-              ));
+              return reject(new ErrorApp('El servicio de OCR no pudo procesar el documento. Intenta de nuevo.', {
+                status: 502,
+                codigo: 'OCR_FALLIDO',
+                causa: new Error(respuesta.error?.message || `Error HTTP ${res.statusCode} de Document AI`),
+              }));
             }
             // Extraer el texto del documento procesado por Document AI
             resolve(respuesta.document?.text || '');
-          } catch {
-            reject(new Error('Error al parsear la respuesta de Document AI'));
+          } catch (errorParseo) {
+            reject(new ErrorApp('El servicio de OCR devolvió una respuesta inválida. Intenta de nuevo.', {
+              status: 502,
+              codigo: 'OCR_RESPUESTA_INVALIDA',
+              causa: errorParseo,
+            }));
           }
         });
       }
     );
 
-    req.on('error', reject); // Manejar errores de red (timeout, DNS, etc.)
+    // Errores de red (timeout, DNS, conexión rechazada, etc.)
+    req.on('error', (errorRed) => reject(new ErrorApp('No se pudo conectar con el servicio de OCR. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'OCR_NO_DISPONIBLE',
+      causa: errorRed,
+    })));
     req.write(cuerpo);       // Escribir el body JSON en la petición
     req.end();               // Finalizar y enviar la petición
   });
@@ -171,14 +184,34 @@ const extraerTexto = async (buffer, mimeType) => {
   }
 
   // Obtener el token OAuth2 una sola vez para todas las peticiones de esta llamada
-  const token = await auth.getAccessToken();
+  let token;
+  try {
+    token = await auth.getAccessToken();
+  } catch (errorAuth) {
+    throw new ErrorApp('No se pudo autenticar con el servicio de OCR. Intenta de nuevo más tarde.', {
+      status: 502,
+      codigo: 'OCR_AUTENTICACION_FALLIDA',
+      causa: errorAuth,
+    });
+  }
 
   let textoFinal = '';
 
   if (mimeType === 'application/pdf') {
-    // Para PDFs, verificar el número de páginas antes de enviar a Document AI
-    const docPDF = await PDFDocument.load(buffer);
-    const totalPaginas = docPDF.getPageCount();
+    // Para PDFs, verificar el número de páginas antes de enviar a Document AI.
+    // Si el PDF no se puede interpretar se rechaza como documento inválido (422)
+    // en lugar de dejar que falle como error interno del servidor.
+    let totalPaginas;
+    try {
+      const docPDF = await PDFDocument.load(buffer);
+      totalPaginas = docPDF.getPageCount();
+    } catch (errorPDF) {
+      throw new ErrorApp('El PDF está dañado, protegido o no se puede leer.', {
+        status: 422,
+        codigo: 'PDF_ILEGIBLE',
+        causa: errorPDF,
+      });
+    }
 
     if (totalPaginas > LIMITE_PAGINAS) {
       // El PDF supera el límite — dividir en trozos y procesar cada uno
@@ -207,7 +240,10 @@ const extraerTexto = async (buffer, mimeType) => {
 
   // Verificar que se extrajo contenido útil del documento
   if (!textoFinal.trim()) {
-    throw new Error('No se pudo extraer texto del documento. Verifica que el archivo tenga contenido legible.');
+    throw new ErrorApp('No se pudo extraer texto del documento. Verifica que el archivo tenga contenido legible.', {
+      status: 422,
+      codigo: 'OCR_SIN_TEXTO',
+    });
   }
 
   return textoFinal;

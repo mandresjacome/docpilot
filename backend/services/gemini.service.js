@@ -13,6 +13,7 @@
 require('dotenv').config();
 
 const { GoogleGenAI } = require('@google/genai');
+const { ErrorApp } = require('../utils/errores');
 
 // Inicializar el cliente de Gemini con la API key del entorno.
 // Se instancia a nivel módulo para reutilizar la conexión en cada petición.
@@ -224,6 +225,26 @@ const limpiarJSON = (textoRespuesta) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// llamarGemini: envuelve generateContent para que cualquier fallo de la API
+// (cuota, red, clave inválida, bloqueo de contenido) se convierta en un error
+// 502 con mensaje seguro. El detalle técnico queda en `causa` solo para logs.
+// Devuelve el texto de la respuesta (puede venir vacío; cada fase decide qué hacer).
+// ─────────────────────────────────────────────────────────────────────────────
+const llamarGemini = async (parametros) => {
+  let resultado;
+  try {
+    resultado = await genai.models.generateContent(parametros);
+  } catch (errorApi) {
+    throw new ErrorApp('El servicio de inteligencia artificial no está disponible en este momento. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'IA_NO_DISPONIBLE',
+      causa: errorApi,
+    });
+  }
+  return typeof resultado?.text === 'string' ? resultado.text : '';
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FASE 1: clasificarDocumento
 // Primera llamada a Gemini: identificar a qué categoría pertenece el documento.
 // Se hace en una llamada separada y liviana para no confundir el modelo
@@ -262,13 +283,13 @@ Reglas de respuesta:
 Fragmento del documento a clasificar:
 ${fragmento}`;
 
-  const resultado = await genai.models.generateContent({
+  const textoClasificacion = await llamarGemini({
     model: MODELO,
     contents: promptClasificacion,
   });
 
   // Normalizar la respuesta: minúsculas y sin espacios extra
-  const categoria = resultado.text.trim().toLowerCase().replace(/\s+/g, '_');
+  const categoria = textoClasificacion.trim().toLowerCase().replace(/\s+/g, '_');
 
   // Verificar que la categoría devuelta es una de las válidas.
   // Si Gemini devuelve algo inesperado, usar el fallback 'otro'.
@@ -316,18 +337,39 @@ const analizarTexto = async (texto) => {
   // Sin esto, Gemini puede dar respuestas distintas al mismo documento
   // (a veces genera sugerenciaRespuesta, a veces no) porque su temperatura
   // por defecto introduce variabilidad. Con 0 la respuesta es determinista.
-  const resultado = await genai.models.generateContent({
+  const textoRespuesta = await llamarGemini({
     model: MODELO,
     contents: promptEspecializado,
     config: { temperature: 0 },
   });
 
-  // Limpiar y parsear la respuesta JSON de Gemini
-  const textoLimpio = limpiarJSON(resultado.text);
+  // Una respuesta vacía no es un análisis: se informa en lugar de fallar con un error críptico
+  if (!textoRespuesta.trim()) {
+    throw new ErrorApp('La IA no devolvió ningún análisis. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'IA_RESPUESTA_VACIA',
+    });
+  }
 
-  // Si el JSON no es válido, JSON.parse lanzará un error que el controlador
-  // capturará en su try/catch y delegará al middleware de errores global
-  const analisisJSON = JSON.parse(textoLimpio);
+  // Limpiar y parsear la respuesta JSON de Gemini.
+  // Si el JSON es inválido (o no es un objeto) se devuelve un 502 con mensaje claro
+  // en vez de exponer el error crudo de JSON.parse al usuario.
+  let analisisJSON;
+  try {
+    analisisJSON = JSON.parse(limpiarJSON(textoRespuesta));
+  } catch (errorJSON) {
+    throw new ErrorApp('La IA devolvió una respuesta que no pudo interpretarse. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'IA_RESPUESTA_INVALIDA',
+      causa: errorJSON,
+    });
+  }
+  if (analisisJSON === null || typeof analisisJSON !== 'object' || Array.isArray(analisisJSON)) {
+    throw new ErrorApp('La IA devolvió una respuesta con un formato inesperado. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'IA_RESPUESTA_INVALIDA',
+    });
+  }
 
   // Agregar la categoría interna al objeto para que el frontend pueda
   // adaptar el renderizado si lo necesita en el futuro

@@ -19,6 +19,10 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
   // Estado de error: mensaje visible al usuario si algo falla
   const [error, setError] = useState(null);
 
+  // Aviso no bloqueante: el documento se analizó pero el registro de uso no pudo guardarse.
+  // Se muestra para no dar por hecho que la confirmación y la encuesta quedarán registradas.
+  const [advertencia, setAdvertencia] = useState(null);
+
   // Estado del resultado: datos devueltos por el backend tras el análisis
   const [resultado, setResultado] = useState(null);
 
@@ -49,6 +53,7 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
   const manejarEnvio = async (archivo) => {
     // Limpiar estados previos antes de iniciar una nueva petición
     setError(null);
+    setAdvertencia(null);
     setResultado(null);
     setConfirmado(false);
     setCargando(true);
@@ -67,6 +72,10 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
       setResultado(datos);
       // Guardar el ID del registro de Supabase para la encuesta y confirmación
       if (datos.registroId) setRegistroId(datos.registroId);
+      // Si el análisis fue exitoso pero el registro de uso no se guardó, avisar al usuario
+      if (datos.registro && datos.registro.guardado === false) {
+        setAdvertencia(datos.registro.advertencia);
+      }
     } catch (err) {
       setError(err.message || 'Ocurrió un error al analizar el documento.');
     } finally {
@@ -88,8 +97,14 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
       // Enviar el análisis aprobado al backend para registrar la confirmación del usuario.
       // Se pasa el registroId para que el backend actualice confirmado=true en Supabase.
       await documentoService.confirmarAccion(resultado, registroId);
-      // Transición al paso de encuesta — no mostrar éxito aún, primero la valoración
-      setMostrarEncuesta(true);
+      // Sin registroId (el registro de uso inicial no se guardó) la valoración no tendría
+      // dónde persistirse, así que se omite la encuesta en lugar de pedir datos que se perderían.
+      if (registroId) {
+        // Transición al paso de encuesta — no mostrar éxito aún, primero la valoración
+        setMostrarEncuesta(true);
+      } else {
+        setConfirmado(true);
+      }
     } catch (err) {
       setError(err.message || 'Ocurrió un error al confirmar la acción.');
     } finally {
@@ -118,6 +133,7 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
     setResultado(null);
     setTiempoAnalisis(null);
     setError(null);
+    setAdvertencia(null);
     setCargando(false);
     // Limpiar el archivo para liberar la referencia en memoria del navegador
     setArchivoActual(null);
@@ -150,6 +166,11 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
         {/* Mensaje de error visible para el usuario */}
         {error && (
           <p className="alerta-error" role="alert">{error}</p>
+        )}
+
+        {/* Aviso: análisis correcto, pero el registro de uso no se guardó */}
+        {advertencia && !confirmado && (
+          <p className="alerta-advertencia" role="status">{advertencia}</p>
         )}
 
         {/* Mensaje de éxito tras la confirmación del usuario */}
