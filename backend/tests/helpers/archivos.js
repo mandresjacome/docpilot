@@ -25,10 +25,10 @@ const chunkPNG = (tipo, datos) => {
 };
 
 /** PNG válido de 1x1 píxel (RGB). */
-const crearPNG = () => {
+const crearPNG = ({ ancho = 1, alto = 1 } = {}) => {
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(1, 0); // ancho
-  ihdr.writeUInt32BE(1, 4); // alto
+  ihdr.writeUInt32BE(ancho, 0);
+  ihdr.writeUInt32BE(alto, 4);
   ihdr[8] = 8;              // profundidad de bits
   ihdr[9] = 2;              // tipo de color RGB
   const pixel = zlib.deflateSync(Buffer.from([0x00, 0xff, 0x00, 0x00])); // filtro 0 + 1 píxel rojo
@@ -50,25 +50,31 @@ const crearJPEG = () => Buffer.from([
   0xff, 0xd9,
 ]);
 
-/** TIFF little-endian de 1x1 con una sola franja de datos. */
-const crearTIFF = () => {
-  const entradas = [
-    [256, 3, 1, 1],  // ImageWidth
-    [257, 3, 1, 1],  // ImageLength
-    [273, 4, 1, 62], // StripOffsets → los datos empiezan en el byte 62
-    [279, 4, 1, 1],  // StripByteCounts
-  ];
+/** TIFF little-endian con una franja de datos por página. */
+const crearTIFF = ({ paginas = 1, ancho = 1, alto = 1 } = {}) => {
   const cabecera = Buffer.from([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00]);
-  const ifd = Buffer.alloc(2 + entradas.length * 12 + 4);
-  ifd.writeUInt16LE(entradas.length, 0);
-  entradas.forEach(([tag, tipo, cantidad, valor], i) => {
-    const o = 2 + i * 12;
-    ifd.writeUInt16LE(tag, o);
-    ifd.writeUInt16LE(tipo, o + 2);
-    ifd.writeUInt32LE(cantidad, o + 4);
-    ifd.writeUInt32LE(valor, o + 8);
+  const tamanoIFD = 2 + 4 * 12 + 4;
+  const offsetImagen = cabecera.length + paginas * tamanoIFD;
+  const directorios = Array.from({ length: paginas }, (_, pagina) => {
+    const entradas = [
+      [256, 3, ancho],
+      [257, 3, alto],
+      [273, 4, offsetImagen + pagina],
+      [279, 4, 1],
+    ];
+    const ifd = Buffer.alloc(tamanoIFD);
+    ifd.writeUInt16LE(entradas.length, 0);
+    entradas.forEach(([tag, tipo, valor], i) => {
+      const o = 2 + i * 12;
+      ifd.writeUInt16LE(tag, o);
+      ifd.writeUInt16LE(tipo, o + 2);
+      ifd.writeUInt32LE(1, o + 4);
+      ifd.writeUInt32LE(valor, o + 8);
+    });
+    if (pagina + 1 < paginas) ifd.writeUInt32LE(cabecera.length + (pagina + 1) * tamanoIFD, tamanoIFD - 4);
+    return ifd;
   });
-  return Buffer.concat([cabecera, ifd, Buffer.from([0x7f])]);
+  return Buffer.concat([cabecera, ...directorios, Buffer.alloc(paginas, 0x7f)]);
 };
 
 /** PDF válido generado con pdf-lib con el número de páginas indicado. */

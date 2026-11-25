@@ -59,6 +59,7 @@ describe('extraerTexto — flujo normal', () => {
     expect(opciones.method).toBe('POST');
     // El documento viaja en base64 dentro del cuerpo JSON, con su MIME
     const cuerpo = JSON.parse(contenido);
+    expect(cuerpo.fieldMask).toBe('text');
     expect(cuerpo.rawDocument.mimeType).toBe('image/png');
     expect(Buffer.from(cuerpo.rawDocument.content, 'base64').equals(crearPNG())).toBe(true);
   });
@@ -113,7 +114,7 @@ describe('extraerTexto — control de costo y tiempos', () => {
     simularDocumentAI({ inactividad: true });
     const error = await extraerTexto(crearPNG(), 'image/png').catch((e) => e);
     expect(error).toMatchObject({ status: 502, codigo: 'OCR_NO_DISPONIBLE' });
-    expect(error.causa.message).toMatch(/no respondió/);
+    expect(error).not.toHaveProperty('causa');
   });
 });
 
@@ -140,7 +141,7 @@ describe('extraerTexto — errores', () => {
     const error = await extraerTexto(crearPNG(), 'image/png').catch((e) => e);
     expect(error).toMatchObject({ status: 502, codigo: 'OCR_FALLIDO' });
     expect(error.message).not.toMatch(/secreto|Permission/);
-    expect(error.causa.message).toMatch(/Permission denied/); // el detalle queda solo para logs
+    expect(error).not.toHaveProperty('causa');
   });
 
   test('traduce una respuesta no JSON a 502', async () => {
@@ -149,6 +150,22 @@ describe('extraerTexto — errores', () => {
       status: 502,
       codigo: 'OCR_RESPUESTA_INVALIDA',
     });
+  });
+
+  test('rechaza respuestas OCR por encima de 4 MiB', async () => {
+    simularDocumentAI({ cuerpo: { document: { text: 'x'.repeat(4 * 1024 * 1024) } } });
+    await expect(extraerTexto(crearPNG(), 'image/png')).rejects.toMatchObject({
+      status: 502,
+      codigo: 'OCR_RESPUESTA_INVALIDA',
+    });
+  });
+
+  test('una solicitud cancelada no inicia autenticación ni llamadas HTTP', async () => {
+    const cancelacion = new AbortController();
+    cancelacion.abort();
+    await expect(extraerTexto(crearPNG(), 'image/png', cancelacion.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(mockGetAccessToken).not.toHaveBeenCalled();
+    expect(https.request).not.toHaveBeenCalled();
   });
 
   test('traduce un fallo de red a 502', async () => {

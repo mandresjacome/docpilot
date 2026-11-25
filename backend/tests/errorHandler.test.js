@@ -33,7 +33,7 @@ describe('errorHandler', () => {
   test('un Error genérico responde 500', async () => {
     const res = await request(crearApp(new Error('fallo'))).get('/falla');
     expect(res.status).toBe(500);
-    expect(res.body.error).toBe('fallo'); // fuera de producción se muestra el mensaje
+    expect(res.body).toEqual({ error: 'Ocurrió un error interno en el servidor.', codigo: 'ERROR_INTERNO' });
   });
 
   test('respeta err.status y err.statusCode de librerías (p. ej. body-parser)', async () => {
@@ -51,7 +51,7 @@ describe('errorHandler', () => {
     });
   });
 
-  test('en producción mantiene el mensaje de errores controlados (ErrorApp) y de 4xx', async () => {
+  test('mantiene el mensaje controlado y oculta el detalle de un 4xx de biblioteca', async () => {
     await conEntorno('production', async () => {
       const controlado = new ErrorApp('La IA no está disponible.', { status: 502, codigo: 'IA_NO_DISPONIBLE' });
       const res1 = await request(crearApp(controlado)).get('/falla');
@@ -59,22 +59,23 @@ describe('errorHandler', () => {
 
       const cliente = Object.assign(new Error('Petición inválida'), { status: 400 });
       const res2 = await request(crearApp(cliente)).get('/falla');
-      expect(res2.body.error).toBe('Petición inválida');
+      expect(res2.body.error).toBe('La solicitud no se pudo interpretar.');
     });
   });
 
-  test('registra los 5xx también en producción, incluida la causa técnica', async () => {
-    await conEntorno('production', async () => {
+  test.each(['development', 'production'])('registra únicamente el estado y código de los 5xx en %s', async (entorno) => {
+    await conEntorno(entorno, async () => {
       console.error.mockClear();
       const error = new ErrorApp('No se pudo guardar.', {
         status: 502,
         codigo: 'PERSISTENCIA_FALLIDA',
-        causa: new Error('duplicate key value'),
       });
       await request(crearApp(error)).get('/falla');
-      const registrado = console.error.mock.calls.flat().join(' ');
-      expect(registrado).toMatch(/502/);
-      expect(registrado).toMatch(/duplicate key value/);
+      await request(crearApp(new Error('texto sensible y credencial ficticia'))).get('/falla');
+      expect(console.error.mock.calls).toEqual([
+        ['[Error 502] (PERSISTENCIA_FALLIDA)'],
+        ['[Error 500] (ERROR_INTERNO)'],
+      ]);
     });
   });
 });

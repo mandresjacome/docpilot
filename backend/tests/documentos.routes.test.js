@@ -13,21 +13,29 @@ const app = require('../app');
 const ocr = require('../services/ocr.service');
 const gemini = require('../services/gemini.service');
 const { ErrorApp } = require('../utils/errores');
+const { crearPermisoAnalisis } = require('../utils/permisoAnalisis');
 const supabaseMock = require('./helpers/supabaseMock');
 const { crearPNG, crearPDF } = require('./helpers/archivos');
 
 const ID = '3f2b8c1e-9d4a-4b6e-8f10-2a7c5d9e1b34';
+const OTRO_ID = '3f2b8c1e-9d4a-4b6e-8f10-2a7c5d9e1b35';
 const ANALISIS = { tipo: 'Factura de venta', resumen: 'Cobro', _categoria: 'factura' };
+
+const peticionAnalisis = () => request(app).post('/api/documentos/analizar').set('x-docpilot-analysis', '1');
 
 // Envía un archivo válido por defecto
 const subir = (buffer = crearPNG(), opciones = { filename: 'foto.png', contentType: 'image/png' }) =>
-  request(app).post('/api/documentos/analizar').attach('documento', buffer, opciones);
+  peticionAnalisis().attach('documento', buffer, opciones);
 
+let ahora = Date.now();
 beforeEach(() => {
+  ahora += 61_000;
+  jest.spyOn(Date, 'now').mockImplementation(() => ahora);
   supabaseMock.reiniciar();
   ocr.extraerTexto.mockReset().mockResolvedValue('texto extraído');
   gemini.analizarTexto.mockReset().mockResolvedValue(ANALISIS);
 });
+afterEach(() => Date.now.mockRestore());
 
 describe('POST /api/documentos/analizar — carga y validación de archivos', () => {
   test('acepta un archivo válido y entrega el buffer al OCR en memoria', async () => {
@@ -50,23 +58,21 @@ describe('POST /api/documentos/analizar — carga y validación de archivos', ()
   });
 
   test('rechaza una petición sin archivo', async () => {
-    const res = await request(app).post('/api/documentos/analizar');
+    const res = await peticionAnalisis();
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('ARCHIVO_REQUERIDO');
     expect(ocr.extraerTexto).not.toHaveBeenCalled();
   });
 
   test('rechaza un archivo enviado en un campo con otro nombre', async () => {
-    const res = await request(app)
-      .post('/api/documentos/analizar')
+    const res = await peticionAnalisis()
       .attach('archivo', crearPNG(), { filename: 'a.png', contentType: 'image/png' });
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('CAMPO_ARCHIVO_INVALIDO');
   });
 
   test('rechaza más de un archivo', async () => {
-    const res = await request(app)
-      .post('/api/documentos/analizar')
+    const res = await peticionAnalisis()
       .attach('documento', crearPNG(), { filename: 'a.png', contentType: 'image/png' })
       .attach('documento', crearPNG(), { filename: 'b.png', contentType: 'image/png' });
     expect(res.status).toBe(400);
@@ -78,6 +84,13 @@ describe('POST /api/documentos/analizar — carga y validación de archivos', ()
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('TIPO_NO_PERMITIDO');
     expect(res.body.error).toMatch(/PDF, PNG, JPEG o TIFF/);
+  });
+
+  test('rechaza campos multipart adicionales sin llamar a OCR', async () => {
+    const res = await subir().field('comentario', 'texto sintético');
+    expect(res.status).toBe(400);
+    expect(res.body.codigo).toBe('CAMPO_ARCHIVO_INVALIDO');
+    expect(ocr.extraerTexto).not.toHaveBeenCalled();
   });
 
   test('rechaza un archivo de más de 10 MB con mensaje en español', async () => {
@@ -153,13 +166,15 @@ describe('POST /api/documentos/analizar — procesamiento y registro', () => {
     expect(res.body).toMatchObject({
       datos: ANALISIS,
       registroId: ID,
+      permisoAnalisis: expect.any(String),
       registro: { guardado: true },
     });
     expect(res.body.mensaje).toMatch(/analizado correctamente/);
-    expect(gemini.analizarTexto).toHaveBeenCalledWith('texto extraído');
+    expect(gemini.analizarTexto).toHaveBeenCalledWith('texto extraído', expect.any(AbortSignal));
+    expect(res.headers['cache-control']).toBe('no-store');
 
     const insertado = supabaseMock.llamo('insert')[0].args[0][0];
-    expect(insertado).toMatchObject({ tipo_documento: 'Factura de venta', confirmado: false });
+    expect(insertado).toMatchObject({ tipo_documento: 'factura', confirmado: false });
     // tiempo_ms es null cuando el procesamiento simulado dura 0 ms (el servicio guarda `|| null`)
     expect(insertado.tiempo_ms === null || typeof insertado.tiempo_ms === 'number').toBe(true);
   });
@@ -240,21 +255,118 @@ describe('POST /api/documentos/analizar — procesamiento y registro', () => {
   });
 });
 
+describe('POST /api/documentos/analizar — protección de recursos', () => {
+  test('rechaza orígenes ajenos y solicitudes de navegador sin la cabecera esperada', async () => {
+    const respuestas = await Promise.all([
+      request(app).post('/api/documentos/analizar'),
+      peticionAnalisis().set('Origin', 'https://ejemplo.invalid'),
+      peticionAnalisis().set('Host', 'ejemplo.invalid'),
+    ]);
+    for (const res of respuestas) {
+      expect(res.status).toBe(403);
+      expect(res.body.codigo).toBe('SOLICITUD_ANALISIS_NO_AUTORIZADA');
+    }
+    expect(ocr.extraerTexto).not.toHaveBeenCalled();
+  });
+
+  test('limita la frecuencia antes de Multer y permite reintentar en la siguiente ventana', async () => {
+    supabaseMock.responder({ data: { id: ID } });
+    for (let i = 0; i < 5; i++) expect((await subir()).status).toBe(200);
+    const bloqueada = await peticionAnalisis();
+    expect(bloqueada.status).toBe(429);
+    expect(bloqueada.body.codigo).toBe('LIMITE_PETICIONES');
+    expect(bloqueada.headers['retry-after']).toBe('60');
+    expect(ocr.extraerTexto).toHaveBeenCalledTimes(5);
+
+    ahora += 60_000;
+    expect((await subir()).status).toBe(200);
+  });
+
+  test('mantiene dos plazas y libera una tras terminar el trabajo', async () => {
+    supabaseMock.responder({ data: { id: ID } });
+    const terminar = [];
+    let avisar;
+    const dosEnCurso = new Promise((resolve) => { avisar = resolve; });
+    const esperar = () => new Promise((resolve) => {
+      terminar.push(resolve);
+      if (terminar.length === 2) avisar();
+    });
+    ocr.extraerTexto.mockImplementationOnce(esperar).mockImplementationOnce(esperar);
+    const enCurso = Promise.all([subir().then(), subir().then()]);
+    try {
+      await dosEnCurso;
+      const bloqueada = await peticionAnalisis();
+      expect(bloqueada.status).toBe(429);
+      expect(bloqueada.body.codigo).toBe('ANALISIS_OCUPADO');
+      expect(ocr.extraerTexto).toHaveBeenCalledTimes(2);
+    } finally {
+      terminar.forEach((resolve) => resolve('texto extraído'));
+      await enCurso;
+    }
+    expect((await subir()).status).toBe(200);
+  });
+
+  test('desconectar el cliente cancela el análisis antes de Gemini', async () => {
+    const servidor = await new Promise((resolve) => {
+      const instancia = app.listen(0, '127.0.0.1', () => resolve(instancia));
+    });
+    const cliente = new AbortController();
+    let avisarInicio;
+    let avisarCancelacion;
+    const iniciada = new Promise((resolve) => { avisarInicio = resolve; });
+    const cancelada = new Promise((resolve) => { avisarCancelacion = resolve; });
+    ocr.extraerTexto.mockImplementationOnce((_buffer, _mime, signal) => new Promise((resolve) => {
+      signal.addEventListener('abort', () => {
+        resolve('texto sintético');
+        avisarCancelacion();
+      }, { once: true });
+      avisarInicio();
+    }));
+    const formulario = new FormData();
+    formulario.append('documento', new Blob([crearPNG()], { type: 'image/png' }), 'imagen.png');
+    const solicitud = fetch(`http://127.0.0.1:${servidor.address().port}/api/documentos/analizar`, {
+      method: 'POST',
+      headers: { 'x-docpilot-analysis': '1' },
+      body: formulario,
+      signal: cliente.signal,
+    }).catch((error) => error);
+
+    try {
+      await iniciada;
+      cliente.abort();
+      expect(await solicitud).toMatchObject({ name: 'AbortError' });
+      await cancelada;
+      expect(gemini.analizarTexto).not.toHaveBeenCalled();
+      expect(supabaseMock.llamadas).toHaveLength(0);
+    } finally {
+      cliente.abort();
+      servidor.closeAllConnections();
+      await new Promise((resolve) => servidor.close(resolve));
+    }
+  });
+});
+
 describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
   const confirmar = (cuerpo) => request(app).post('/api/documentos/confirmar').send(cuerpo);
 
-  test('confirma y marca el registro como confirmado en Supabase', async () => {
+  test('usa el permiso del análisis para confirmar y guardar una encuesta', async () => {
+    supabaseMock.responder({ data: { id: ID } });
+    const analisis = await subir();
+    const cuerpo = { registroId: ID, permisoAnalisis: analisis.body.permisoAnalisis };
     supabaseMock.responder({ data: [{ id: ID }] });
 
-    const res = await confirmar({ datos: ANALISIS, registroId: ID });
-
+    const res = await confirmar(cuerpo);
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ datosConfirmados: ANALISIS, registroActualizado: true });
+    expect(res.body).toMatchObject({ registroActualizado: true });
     expect(supabaseMock.llamo('update')[0].args[0]).toEqual({ confirmado: true });
+
+    const valoracion = await request(app).post('/api/documentos/encuesta').send({ ...cuerpo, estrellas: 5 });
+    expect(valoracion.status).toBe(200);
   });
 
   test('sin registroId (guardado inicial fallido) confirma pero informa registroActualizado=false', async () => {
-    const res = await confirmar({ datos: ANALISIS, registroId: null });
+    const analisis = await subir();
+    const res = await confirmar({ registroId: null, permisoAnalisis: analisis.body.permisoAnalisis });
     expect(res.status).toBe(200);
     expect(res.body.registroActualizado).toBe(false);
     expect(supabaseMock.llamo('update')).toHaveLength(0);
@@ -263,7 +375,7 @@ describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
   test('si falla el guardado de la confirmación responde 502 (no un éxito falso)', async () => {
     supabaseMock.responder({ error: { message: 'timeout' } });
 
-    const res = await confirmar({ datos: ANALISIS, registroId: ID });
+    const res = await confirmar({ registroId: ID, permisoAnalisis: crearPermisoAnalisis(ID) });
 
     expect(res.status).toBe(502);
     expect(res.body.codigo).toBe('PERSISTENCIA_FALLIDA');
@@ -272,19 +384,27 @@ describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
 
   test('responde 404 si el registro ya no existe', async () => {
     supabaseMock.responder({ data: [] });
-    const res = await confirmar({ datos: ANALISIS, registroId: ID });
+    const res = await confirmar({ registroId: ID, permisoAnalisis: crearPermisoAnalisis(ID) });
     expect(res.status).toBe(404);
   });
 
-  test('no escribe en el log datos controlados por el cliente (evita falsear líneas)', async () => {
-    supabaseMock.responder({ data: [{ id: ID }] });
-    const inyeccion = 'factura\n[Error 500] (PERSISTENCIA_FALLIDA) línea falsa';
+  test('ni la confirmación ni la encuesta aceptan permisos ajenos, ausentes o vencidos', async () => {
+    const vencido = crearPermisoAnalisis(OTRO_ID);
+    ahora += 60 * 60_000;
+    const ajeno = crearPermisoAnalisis(ID);
+    const vigente = crearPermisoAnalisis(OTRO_ID);
+    const alterado = vigente.slice(0, -1) + (vigente.endsWith('A') ? 'B' : 'A');
 
-    await confirmar({ datos: { tipo: inyeccion }, registroId: ID });
-
-    const log = console.log.mock.calls.flat().join('\n');
-    expect(log).toMatch(/\[HITL\]/);
-    expect(log).not.toContain('línea falsa');
+    for (const ruta of ['confirmar', 'encuesta']) {
+      for (const permisoAnalisis of [undefined, ajeno, vencido, alterado]) {
+        const res = await request(app).post(`/api/documentos/${ruta}`).send({
+          registroId: OTRO_ID, permisoAnalisis, estrellas: 5,
+        });
+        expect(res.status).toBe(403);
+        expect(res.body.codigo).toBe('PERMISO_ANALISIS_INVALIDO');
+      }
+    }
+    expect(supabaseMock.llamadas).toHaveLength(0);
   });
 
   test('un JSON mal formado con saltos de línea no puede falsear el log de errores', async () => {
@@ -295,17 +415,12 @@ describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
       .send('{"datos": "a\n[Error 500] (X) falsa"');
 
     expect(res.status).toBe(400);
-    // ninguna línea de log puede contener un salto de línea provocado por el cliente
-    for (const argumentos of console.error.mock.calls) {
-      for (const argumento of argumentos) expect(String(argumento)).not.toMatch(/[\r\n]/);
-    }
+    expect(res.body.error).not.toContain('falsa');
+    expect(console.error).not.toHaveBeenCalled();
   });
 
-  test('responde 400 si no se envían datos o si el registroId no es un UUID', async () => {
-    expect((await confirmar({ registroId: ID })).status).toBe(400);
-    expect((await request(app).post('/api/documentos/confirmar')).status).toBe(400);
-
-    const res = await confirmar({ datos: ANALISIS, registroId: "1'; drop table registros_uso;--" });
+  test('responde 400 si el registroId no es un UUID', async () => {
+    const res = await confirmar({ registroId: 'id inválido' });
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe('REGISTRO_ID_INVALIDO');
     expect(supabaseMock.llamo('update')).toHaveLength(0);
@@ -314,11 +429,12 @@ describe('POST /api/documentos/confirmar (cierre Human-in-the-Loop)', () => {
 
 describe('POST /api/documentos/encuesta', () => {
   const encuesta = (cuerpo) => request(app).post('/api/documentos/encuesta').send(cuerpo);
-  const valida = { registroId: ID, estrellas: 5, tiempo_ahorrado: '10-30 min', comentario: 'Muy útil' };
+  const valida = { registroId: ID, estrellas: 5, tiempo_ahorrado: '5_15min', comentario: 'Muy útil' };
+  const enviarValida = () => encuesta({ ...valida, permisoAnalisis: crearPermisoAnalisis(ID) });
 
   test('guarda la valoración', async () => {
     supabaseMock.responder({ data: [{ id: ID }] });
-    const res = await encuesta(valida);
+    const res = await enviarValida();
     expect(res.status).toBe(200);
     expect(res.body.mensaje).toMatch(/registrada correctamente/);
     expect(supabaseMock.llamo('update')[0].args[0]).toMatchObject({ estrellas: 5, comentario: 'Muy útil' });
@@ -326,7 +442,7 @@ describe('POST /api/documentos/encuesta', () => {
 
   test('responde 502 si la valoración no se pudo guardar', async () => {
     supabaseMock.responder({ error: { message: 'x' } });
-    const res = await encuesta(valida);
+    const res = await enviarValida();
     expect(res.status).toBe(502);
     expect(res.body.mensaje).toBeUndefined();
   });
@@ -338,11 +454,26 @@ describe('POST /api/documentos/encuesta', () => {
     ['estrellas 6', { ...valida, estrellas: 6 }, 'ESTRELLAS_INVALIDAS'],
     ['estrellas decimal', { ...valida, estrellas: 2.5 }, 'ESTRELLAS_INVALIDAS'],
     ['estrellas texto', { ...valida, estrellas: '5' }, 'ESTRELLAS_INVALIDAS'],
+    ['estrellas ausentes', { ...valida, estrellas: undefined }, 'ESTRELLAS_INVALIDAS'],
+    ['tiempo inválido', { ...valida, tiempo_ahorrado: 'una hora' }, 'ENCUESTA_INVALIDA'],
     ['comentario no texto', { ...valida, comentario: { x: 1 } }, 'ENCUESTA_INVALIDA'],
+    ['comentario demasiado largo', { ...valida, comentario: 'x'.repeat(201) }, 'ENCUESTA_INVALIDA'],
   ])('responde 400: %s', async (_caso, cuerpo, codigo) => {
-    const res = await encuesta(cuerpo);
+    const res = await encuesta({ ...cuerpo, permisoAnalisis: crearPermisoAnalisis(ID) });
     expect(res.status).toBe(400);
     expect(res.body.codigo).toBe(codigo);
     expect(supabaseMock.llamo('update')).toHaveLength(0);
+  });
+
+  test.each([
+    [{ confirmado: false }, 'ANALISIS_NO_CONFIRMADO'],
+    [{ confirmado: true, estrellas: 4 }, 'ENCUESTA_YA_REGISTRADA'],
+    [{ confirmado: true, comentario: 'Valoración anterior' }, 'ENCUESTA_YA_REGISTRADA'],
+    [{ confirmado: true }, 'ESTADO_REGISTRO_CAMBIO'],
+  ])('rechaza una encuesta en estado incompatible (%j)', async (estado, codigo) => {
+    supabaseMock.responderEnOrden({ data: [] }, { data: [estado] });
+    const res = await enviarValida();
+    expect(res.status).toBe(409);
+    expect(res.body.codigo).toBe(codigo);
   });
 });

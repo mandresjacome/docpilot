@@ -1,10 +1,13 @@
 // Configuración de CORS para desarrollo local.
 // En producción Express sirve el frontend desde el mismo origen, por lo que CORS no se habilita
 // (ver app.js). En desarrollo, el proxy de Vite evita CORS; esta configuración solo se usa si el
-// frontend apunta directamente al backend (VITE_API_URL=http://localhost:3001/api).
+// frontend apunta directamente al backend (VITE_API_URL=http://127.0.0.1:3001/api).
 
 // Únicos orígenes permitidos: servidor de desarrollo de Vite y vista previa del build
-const ORIGENES_PERMITIDOS = ['http://localhost:5173', 'http://localhost:4173'];
+const ORIGENES_PERMITIDOS = [
+  'http://localhost:5173', 'http://localhost:4173',
+  'http://127.0.0.1:5173', 'http://127.0.0.1:4173',
+];
 
 const opcionesCors = {
   origin: ORIGENES_PERMITIDOS,
@@ -14,9 +17,8 @@ const opcionesCors = {
   // de esas solicitudes se rechaza en el navegador.
   methods: ['GET', 'POST', 'DELETE'],
 
-  // Se listan solo los headers que usa la aplicación en lugar de reflejar cualquiera:
-  // 'x-admin-token' (panel admin) y 'Content-Type' (necesario para los JSON, que provocan preflight).
-  allowedHeaders: ['Content-Type', 'x-admin-token'],
+  // Cabeceras de los cuerpos JSON, el panel de administración y la carga de análisis.
+  allowedHeaders: ['Content-Type', 'x-admin-token', 'x-docpilot-analysis'],
 
   // El navegador puede cachear el resultado del preflight 10 minutos
   maxAge: 600,

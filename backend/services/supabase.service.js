@@ -9,17 +9,15 @@
 // de red) lanza un ErrorPersistencia. Ninguna función devuelve éxito si el dato no se
 // guardó; es el controlador quien decide si el fallo es fatal o solo una advertencia.
 
-require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { ErrorApp } = require('../utils/errores');
 
 // Error específico de la capa de persistencia (502: falla el servicio externo, no la petición)
 class ErrorPersistencia extends ErrorApp {
-  constructor(operacion, causa) {
+  constructor(operacion) {
     super(`No se pudo ${operacion} en la base de datos. Intenta de nuevo en unos minutos.`, {
       status: 502,
       codigo: 'PERSISTENCIA_FALLIDA',
-      causa,
     });
     this.name = 'ErrorPersistencia';
   }
@@ -63,35 +61,24 @@ const ejecutar = async (operacion, consulta) => {
   let resultado;
   try {
     resultado = await consulta();
-  } catch (err) {
-    throw new ErrorPersistencia(operacion, err);
+  } catch {
+    throw new ErrorPersistencia(operacion);
   }
 
   if (!resultado || resultado.error) {
-    throw new ErrorPersistencia(operacion, resultado && resultado.error);
+    throw new ErrorPersistencia(operacion);
   }
   return resultado;
 };
 
-/**
- * registrarUso — inserta un registro de metadatos de sesión en Supabase.
- *
- * @param {Object} datos
- * @param {string}  datos.tipo_documento   - Tipo detectado por Gemini (contrato, factura, etc.)
- * @param {number}  datos.tiempo_ms        - Milisegundos que tardó el ciclo OCR + Gemini
- * @param {boolean} datos.confirmado       - true si el usuario aprobó el resultado (HITL)
- *
- * @returns {Promise<void>}
- * @throws {ErrorPersistencia} si el registro no pudo guardarse
- */
-const registrarUso = async ({ tipo_documento, tiempo_ms, confirmado }) => {
-  await ejecutar('registrar el uso', () => supabase
+const leerEstadoRegistro = async (id) => {
+  const { data } = await ejecutar('consultar el estado del registro', () => supabase
     .from('registros_uso')
-    .insert([{
-      tipo_documento: tipo_documento || 'desconocido',
-      tiempo_ms:      tiempo_ms      || null,
-      confirmado:     confirmado     || false,
-    }]));
+    .select('confirmado,estrellas,tiempo_ahorrado,comentario')
+    .eq('id', id));
+
+  if (!data?.length) throw new ErrorRegistroNoEncontrado();
+  return data[0];
 };
 
 /**
@@ -109,7 +96,8 @@ const registrarUso = async ({ tipo_documento, tiempo_ms, confirmado }) => {
  * @throws {ErrorRegistroNoEncontrado} si no existe un registro con ese id
  */
 const registrarEncuesta = async ({ id, estrellas, tiempo_ahorrado, comentario }) => {
-  // .select('id') permite saber cuántas filas se actualizaron: 0 filas = id inexistente
+  // La condición evita que dos envíos concurrentes escriban la misma encuesta.
+  // También protege encuestas antiguas que solo tienen tiempo o comentario.
   const { data } = await ejecutar('registrar la valoración', () => supabase
     .from('registros_uso')
     .update({
@@ -119,9 +107,31 @@ const registrarEncuesta = async ({ id, estrellas, tiempo_ahorrado, comentario })
       comentario: comentario ? comentario.slice(0, 200) : null,
     })
     .eq('id', id)
+    .eq('confirmado', true)
+    .is('estrellas', null)
+    .is('tiempo_ahorrado', null)
+    .is('comentario', null)
     .select('id'));
 
-  if (!data || data.length === 0) throw new ErrorRegistroNoEncontrado();
+  if (data?.length) return;
+
+  const { confirmado, estrellas: valoracion, tiempo_ahorrado: tiempo, comentario: nota } = await leerEstadoRegistro(id);
+  if (!confirmado) {
+    throw new ErrorApp('Confirma el análisis antes de enviar la valoración.', {
+      status: 409,
+      codigo: 'ANALISIS_NO_CONFIRMADO',
+    });
+  }
+  if (valoracion == null && tiempo == null && nota == null) {
+    throw new ErrorApp('El estado del registro cambió. Vuelve a enviar la valoración.', {
+      status: 409,
+      codigo: 'ESTADO_REGISTRO_CAMBIO',
+    });
+  }
+  throw new ErrorApp('Este análisis ya tiene una valoración registrada.', {
+    status: 409,
+    codigo: 'ENCUESTA_YA_REGISTRADA',
+  });
 };
 
 /**
@@ -135,7 +145,7 @@ const registrarEncuesta = async ({ id, estrellas, tiempo_ahorrado, comentario })
 const obtenerEstadisticas = async () => {
   const { data } = await ejecutar('consultar las estadísticas', () => supabase
     .from('registros_uso')
-    .select('*')
+    .select('id,fecha_hora,tipo_documento,tiempo_ms,confirmado,estrellas,tiempo_ahorrado,comentario')
     .order('fecha_hora', { ascending: false })
     .limit(500));
 
@@ -143,11 +153,11 @@ const obtenerEstadisticas = async () => {
 };
 
 /**
- * registrarUsoConRetorno — igual que registrarUso pero devuelve el registro insertado.
+ * Inserta los metadatos de uso y devuelve el identificador del registro.
  * Se usa en el controlador de documentos para obtener el id y pasarlo al frontend,
  * permitiendo actualizar el mismo registro con la encuesta y la confirmación.
  *
- * @param {Object} datos - Mismos campos que registrarUso
+ * @param {{tipo_documento: string, tiempo_ms: number, confirmado: boolean}} datos
  * @returns {Promise<{data: {id: string}}>} - El registro insertado (siempre con id)
  * @throws {ErrorPersistencia} si el registro no pudo guardarse
  */
@@ -163,7 +173,7 @@ const registrarUsoConRetorno = async ({ tipo_documento, tiempo_ms, confirmado })
     .single());
 
   // Un insert "exitoso" sin id no sirve para enlazar la confirmación ni la encuesta
-  if (!data || !data.id) throw new ErrorPersistencia('registrar el uso', new Error('Respuesta sin id'));
+  if (!data || !data.id) throw new ErrorPersistencia('registrar el uso');
 
   return { data };
 };
@@ -182,9 +192,11 @@ const marcarConfirmado = async (id) => {
     .from('registros_uso')
     .update({ confirmado: true })
     .eq('id', id)
+    .eq('confirmado', false)
     .select('id'));
 
-  if (!data || data.length === 0) throw new ErrorRegistroNoEncontrado();
+  // Si ya estaba confirmado, el reintento conserva el éxito sin volver a escribir.
+  if (!data?.length) await leerEstadoRegistro(id);
 };
 
 /**
@@ -222,7 +234,6 @@ const limpiarTodosLosRegistros = async () => {
 };
 
 module.exports = {
-  registrarUso,
   registrarUsoConRetorno,
   marcarConfirmado,
   registrarEncuesta,

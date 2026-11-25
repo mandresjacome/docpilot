@@ -8,7 +8,7 @@
 // El componente notifica al padre cuando el usuario envía o salta la encuesta.
 // En ningún caso bloquea el flujo — la encuesta es voluntaria.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // Mapa de tipo de documento detectado → prefijo de código de validación.
 // Permite pre-llenar el campo de código según la categoría que Gemini asignó,
@@ -49,17 +49,16 @@ const OPCIONES_TIEMPO = [
  * EncuestaUtilidad
  * Props:
  *   - registroId:     string UUID del registro en Supabase (para actualizar el mismo registro)
+ *   - permisoAnalisis: permiso temporal recibido en el análisis
  *   - tipoDocumento:  string categoría detectada por Gemini (para pre-llenar el prefijo de código)
  *   - onFinalizar:    función del padre que se llama al enviar o saltar la encuesta
  */
-const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
+const EncuestaUtilidad = ({ registroId, permisoAnalisis, tipoDocumento, onFinalizar }) => {
   // Código de validación del documento — se pre-llena con el prefijo según el tipo detectado.
   // Formato esperado: COT-R-001 (prefijo-origen-número). El usuario completa R/S y el número.
-  const [codigoDocumento, setCodigoDocumento] = useState(() => {
-    const prefijo = obtenerPrefijo(tipoDocumento);
-    // Si hay prefijo reconocido, pre-llenar con él para guiar al usuario
-    return prefijo ? `${prefijo}-` : '';
-  });
+  const prefijo = obtenerPrefijo(tipoDocumento);
+  const codigoSugerido = prefijo ? `${prefijo}-` : '';
+  const [codigoDocumento, setCodigoDocumento] = useState(codigoSugerido);
 
   // Valoración de 1 a 5 estrellas — null significa que el usuario no ha seleccionado aún
   const [estrellas, setEstrellas] = useState(null);
@@ -101,7 +100,7 @@ const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
       // con el formato [COT-R-001] para poder identificar el registro en la ficha de validación.
       // Esto evita necesitar una columna nueva en Supabase mientras el panel no esté accesible.
       const codigoLimpio = codigoDocumento.trim().toUpperCase();
-      const comentarioFinal = codigoLimpio
+      const comentarioFinal = codigoLimpio && codigoLimpio !== codigoSugerido
         ? `[${codigoLimpio}] ${comentario.trim()}`.trim().slice(0, 200)
         : comentario.trim().slice(0, 200) || null;
 
@@ -110,6 +109,7 @@ const EncuestaUtilidad = ({ registroId, tipoDocumento, onFinalizar }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registroId,
+          permisoAnalisis,
           estrellas,
           tiempo_ahorrado: tiempoAhorrado,
           comentario: comentarioFinal,

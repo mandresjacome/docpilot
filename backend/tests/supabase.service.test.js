@@ -60,7 +60,7 @@ describe('registrarUsoConRetorno', () => {
 
     const promesa = servicio.registrarUsoConRetorno({});
     await expect(promesa).rejects.toBeInstanceOf(servicio.ErrorPersistencia);
-    await expect(promesa).rejects.toMatchObject({ causa: expect.objectContaining({ message: 'fetch failed' }) });
+    await expect(promesa).rejects.not.toHaveProperty('causa');
   });
 
   test('lanza error si la respuesta no trae id (no hay éxito falso)', async () => {
@@ -75,26 +75,19 @@ describe('registrarUsoConRetorno', () => {
   });
 });
 
-describe('registrarUso', () => {
-  test('resuelve cuando el insert funciona', async () => {
-    supabaseMock.responder({ data: null });
-    await expect(servicio.registrarUso({ tipo_documento: 'carta' })).resolves.toBeUndefined();
-  });
-
-  test('lanza ErrorPersistencia si el insert falla', async () => {
-    supabaseMock.responder({ error: { message: 'boom' } });
-    await expect(servicio.registrarUso({ tipo_documento: 'carta' })).rejects.toBeInstanceOf(
-      servicio.ErrorPersistencia
-    );
-  });
-});
-
 describe('marcarConfirmado', () => {
   test('actualiza confirmado=true por id', async () => {
     supabaseMock.responder({ data: [{ id: ID }] });
     await servicio.marcarConfirmado(ID);
     expect(supabaseMock.llamo('update')[0].args[0]).toEqual({ confirmado: true });
     expect(supabaseMock.llamo('eq')[0].args).toEqual(['id', ID]);
+    expect(supabaseMock.llamo('eq')[1].args).toEqual(['confirmado', false]);
+  });
+
+  test('una confirmación ya guardada puede reintentarse sin escribir de nuevo', async () => {
+    supabaseMock.responderEnOrden({ data: [] }, { data: [{ confirmado: true }] });
+    await expect(servicio.marcarConfirmado(ID)).resolves.toBeUndefined();
+    expect(supabaseMock.llamo('update')).toHaveLength(1);
   });
 
   test('lanza 404 si el registro no existe (0 filas actualizadas)', async () => {
@@ -118,14 +111,18 @@ describe('registrarEncuesta', () => {
     await servicio.registrarEncuesta({
       id: ID,
       estrellas: 5,
-      tiempo_ahorrado: '10-30 min',
+      tiempo_ahorrado: '5_15min',
       comentario: 'x'.repeat(500),
     });
 
     const cambios = supabaseMock.llamo('update')[0].args[0];
     expect(cambios.estrellas).toBe(5);
-    expect(cambios.tiempo_ahorrado).toBe('10-30 min');
+    expect(cambios.tiempo_ahorrado).toBe('5_15min');
     expect(cambios.comentario).toHaveLength(200);
+    expect(supabaseMock.llamo('eq').map(({ args }) => args)).toEqual([['id', ID], ['confirmado', true]]);
+    expect(supabaseMock.llamo('is').map(({ args }) => args)).toEqual([
+      ['estrellas', null], ['tiempo_ahorrado', null], ['comentario', null],
+    ]);
   });
 
   test('guarda null en los campos opcionales ausentes', async () => {

@@ -30,6 +30,7 @@ const tokensCoinciden = (recibido, esperado) => {
  * Se reutiliza en cada endpoint del panel para no duplicar la validación.
  */
 const verificarToken = (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
   const tokenRecibido  = req.headers['x-admin-token'];
   const tokenEsperado = process.env.ADMIN_TOKEN;
 
@@ -76,7 +77,7 @@ const obtenerDashboard = async (req, res, next) => {
       const tipo = r.tipo_documento || 'desconocido';
       acc[tipo] = (acc[tipo] || 0) + 1;
       return acc;
-    }, {});
+    }, Object.create(null));
 
     // Promedio de estrellas — solo considera registros con valoración
     const conEstrellas = registros.filter((r) => r.estrellas !== null && r.estrellas !== undefined);
@@ -90,7 +91,7 @@ const obtenerDashboard = async (req, res, next) => {
         acc[r.tiempo_ahorrado] = (acc[r.tiempo_ahorrado] || 0) + 1;
       }
       return acc;
-    }, {});
+    }, Object.create(null));
 
     // Tiempo promedio de procesamiento OCR + Gemini en milisegundos
     const conTiempo = registros.filter((r) => r.tiempo_ms);

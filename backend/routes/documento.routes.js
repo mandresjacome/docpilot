@@ -8,12 +8,19 @@ const documentoController = require('../controllers/documento.controller');
 
 // Importar el middleware de validación de archivos
 const { validarArchivo } = require('../middlewares/validarArchivo');
+const { limitarPeticiones, limitarAnalisisConcurrentes } = require('../middlewares/limites');
+const protegerSolicitudAnalisis = require('../middlewares/protegerSolicitudAnalisis');
 
 // POST /api/documentos/analizar
 // Recibe el documento del cliente, lo valida y lo envía al controlador para su análisis.
 // El middleware validarArchivo actúa como guardián: si el archivo no cumple,
 // rechaza la petición antes de que llegue al controlador.
-router.post('/analizar', validarArchivo, documentoController.analizar);
+router.post(
+  '/analizar',
+  protegerSolicitudAnalisis,
+  limitarPeticiones(5),
+  limitarAnalisisConcurrentes(2, validarArchivo, documentoController.analizar)
+);
 
 // POST /api/documentos/confirmar
 // Endpoint de confirmación HITL (Human-in-the-Loop).

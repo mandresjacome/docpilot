@@ -4,9 +4,8 @@
 // lo que facilita cambiar la URL base o el cliente HTTP sin tocar los componentes.
 
 // URL base del backend.
-// - Desarrollo: VITE_API_URL apunta a http://localhost:3001/api (o usa el proxy de Vite)
-// - Producción: al estar frontend y backend en el mismo servidor Railway,
-//   se usa una ruta relativa '/api' para no hardcodear ninguna URL.
+// - Desarrollo: VITE_API_URL apunta a http://127.0.0.1:3001/api (o usa el proxy de Vite)
+// Cuando Express sirve el frontend compilado, /api funciona desde el mismo origen.
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 /**
@@ -24,6 +23,7 @@ const analizarDocumento = async (archivo) => {
 
   const respuesta = await fetch(`${API_BASE}/documentos/analizar`, {
     method: 'POST',
+    headers: { 'x-docpilot-analysis': '1' },
     // No establecer Content-Type manualmente: el navegador lo hace automáticamente
     // con el boundary correcto para multipart/form-data
     body: formData,
@@ -44,16 +44,15 @@ const analizarDocumento = async (archivo) => {
  * Solo debe invocarse desde el componente después de que el usuario haya revisado
  * el resultado de la IA (principio Human-in-the-Loop).
  *
- * @param {Object} datosConfirmacion - Datos del resultado aprobado por el usuario
- * @param {string|null} registroId   - ID del registro en Supabase para marcarlo como confirmado
+ * @param {string|null} registroId - ID del registro en Supabase
+ * @param {string} permisoAnalisis - Permiso temporal devuelto al analizar
  * @returns {Promise<Object>} - Respuesta del backend
  */
-const confirmarAccion = async (datosConfirmacion, registroId = null) => {
+const confirmarAccion = async (registroId, permisoAnalisis) => {
   const respuesta = await fetch(`${API_BASE}/documentos/confirmar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // Se incluye el registroId para que el backend actualice confirmado=true en Supabase
-    body: JSON.stringify({ ...datosConfirmacion, registroId }),
+    body: JSON.stringify({ registroId, permisoAnalisis }),
   });
 
   if (!respuesta.ok) {

@@ -14,6 +14,7 @@ const opcionesCliente = GoogleGenAI.mock.calls[0][0];
 describe('cliente de Gemini', () => {
   test('se crea con un timeout para no retener la petición indefinidamente', () => {
     expect(opcionesCliente.httpOptions.timeout).toBeGreaterThan(0);
+    expect(opcionesCliente.httpOptions.retryOptions.attempts).toBe(1);
     expect(opcionesCliente.apiKey).toBe(process.env.GEMINI_API_KEY);
   });
 });
@@ -21,7 +22,8 @@ describe('cliente de Gemini', () => {
 const ANALISIS = {
   tipo: 'Factura de venta',
   resumen: 'Cobro por servicios',
-  alertas: [],
+  datosRelevantes: { total: 'COP 500.000', impuestos: null },
+  alertas: null,
   sugerenciaRespuesta: 'Acusar recibo',
 };
 
@@ -44,11 +46,33 @@ describe('analizarTexto — flujo normal', () => {
 
     // 1ª llamada: clasificación sobre un fragmento del texto
     expect(mockGenerar.mock.calls[0][0].contents).toContain('FACTURA No. 123');
-    // 2ª llamada: prompt de factura con el texto completo, fecha actual y temperatura 0
+    expect(mockGenerar.mock.calls[0][0].model).toBe('gemini-3.5-flash-lite');
+    // 2ª llamada: prompt especializado y salida JSON estructurada
     const segunda = mockGenerar.mock.calls[1][0];
     expect(segunda.contents).toContain('FACTURA No. 123 total $500.000');
     expect(segunda.contents).toContain('La fecha actual del sistema es');
-    expect(segunda.config).toEqual({ temperature: 0 });
+    expect(segunda.config).toMatchObject({
+      maxOutputTokens: 4_096,
+      responseMimeType: 'application/json',
+      responseJsonSchema: { type: 'object', required: expect.arrayContaining(['datosRelevantes', 'alertas']) },
+    });
+    for (const [peticion] of mockGenerar.mock.calls) {
+      for (const parametro of ['temperature', 'topP', 'topK', 'candidateCount']) {
+        expect(peticion.config).not.toHaveProperty(parametro);
+      }
+    }
+  });
+
+  test('usa el modelo configurado en las dos etapas', async () => {
+    process.env.GEMINI_MODEL = 'gemini-3.1-flash-lite';
+    try {
+      encolar('factura', JSON.stringify(ANALISIS));
+      await analizarTexto('documento de prueba');
+      expect(mockGenerar.mock.calls.map(([peticion]) => peticion.model))
+        .toEqual(['gemini-3.1-flash-lite', 'gemini-3.1-flash-lite']);
+    } finally {
+      delete process.env.GEMINI_MODEL;
+    }
   });
 
   test('normaliza la categoría (mayúsculas y espacios) devuelta por Gemini', async () => {
@@ -93,7 +117,7 @@ describe('analizarTexto — errores de la IA', () => {
 
     expect(error).toMatchObject({ status: 502, codigo: 'IA_NO_DISPONIBLE' });
     expect(error.message).not.toMatch(/RESOURCE_EXHAUSTED|AIza/);
-    expect(error.causa.message).toMatch(/RESOURCE_EXHAUSTED/); // solo para logs
+    expect(error).not.toHaveProperty('causa');
   });
 
   test('traduce un fallo en la fase de análisis (no solo en la clasificación)', async () => {
@@ -121,6 +145,36 @@ describe('analizarTexto — errores de la IA', () => {
       await expect(analizarTexto('texto')).rejects.toMatchObject({ status: 502, codigo: 'IA_RESPUESTA_INVALIDA' });
     }
   );
+
+  test.each([
+    { tipo: {} },
+    { resumen: ' ' },
+    { sugerenciaRespuesta: null },
+    { alertas: [] },
+    { datosRelevantes: { total: { moneda: 'COP' } } },
+    { datosRelevantes: { concepto: 'x'.repeat(8_001) } },
+  ])('rechaza campos de análisis que incumplen el contrato', async (cambios) => {
+    encolar('factura', JSON.stringify({ ...ANALISIS, ...cambios }));
+    await expect(analizarTexto('texto')).rejects.toMatchObject({ codigo: 'IA_RESPUESTA_INVALIDA' });
+  });
+
+  test('omite campos inesperados y usa la categoría validada', async () => {
+    encolar('factura', JSON.stringify({ ...ANALISIS, _categoria: 'otra', extra: 'texto' }));
+    await expect(analizarTexto('texto')).resolves.toEqual({ ...ANALISIS, _categoria: 'factura' });
+  });
+
+  test('rechaza análisis interrumpidos por el límite de salida', async () => {
+    mockGenerar.mockResolvedValueOnce({ text: 'factura' }).mockResolvedValueOnce({
+      text: JSON.stringify(ANALISIS),
+      candidates: [{ finishReason: 'MAX_TOKENS' }],
+    });
+    await expect(analizarTexto('texto')).rejects.toMatchObject({ codigo: 'IA_RESPUESTA_VACIA' });
+  });
+
+  test('rechaza texto OCR excesivo antes de contactar Gemini', async () => {
+    await expect(analizarTexto('x'.repeat(400_001))).rejects.toMatchObject({ codigo: 'TEXTO_DEMASIADO_EXTENSO' });
+    expect(mockGenerar).not.toHaveBeenCalled();
+  });
 
   test('falla si GEMINI_API_KEY no está configurada y no llama a la API', async () => {
     const original = process.env.GEMINI_API_KEY;

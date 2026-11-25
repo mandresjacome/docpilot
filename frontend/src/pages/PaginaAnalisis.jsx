@@ -6,7 +6,7 @@
 //   4. Se muestra la encuesta de utilidad post-confirmación (voluntaria).
 //   5. Pantalla de éxito con opción de analizar otro documento.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import FormularioDocumento from '../components/FormularioDocumento';
 import VistaDividida from '../components/VistaDividida';
 import EncuestaUtilidad from '../components/EncuestaUtilidad';
@@ -33,9 +33,7 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
   // Se activa DESPUÉS de que el usuario confirma (HITL) y ANTES de limpiar la sesión.
   const [mostrarEncuesta, setMostrarEncuesta] = useState(false);
 
-  // ID del registro insertado en Supabase al analizar el documento.
-  // Se usa para actualizar el mismo registro con la confirmación y la encuesta.
-  const [registroId, setRegistroId] = useState(null);
+  const { registroId, permisoAnalisis } = resultado || {};
 
   // Tiempo real de análisis medido en el cliente (en segundos).
   // Se calcula desde que el usuario envía el formulario hasta que llega el resultado.
@@ -70,8 +68,6 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
       setTiempoAnalisis(((Date.now() - inicioAnalisis) / 1000).toFixed(1));
       // Guardar el resultado para que el usuario lo revise (HITL)
       setResultado(datos);
-      // Guardar el ID del registro de Supabase para la encuesta y confirmación
-      if (datos.registroId) setRegistroId(datos.registroId);
       // Si el análisis fue exitoso pero el registro de uso no se guardó, avisar al usuario
       if (datos.registro && datos.registro.guardado === false) {
         setAdvertencia(datos.registro.advertencia);
@@ -94,9 +90,7 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
     setError(null);
 
     try {
-      // Enviar el análisis aprobado al backend para registrar la confirmación del usuario.
-      // Se pasa el registroId para que el backend actualice confirmado=true en Supabase.
-      await documentoService.confirmarAccion(resultado, registroId);
+      await documentoService.confirmarAccion(registroId, permisoAnalisis);
       // Sin registroId (el registro de uso inicial no se guardó) la valoración no tendría
       // dónde persistirse, así que se omite la encuesta en lugar de pedir datos que se perderían.
       if (registroId) {
@@ -129,7 +123,6 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
   const reiniciar = () => {
     setConfirmado(false);
     setMostrarEncuesta(false);
-    setRegistroId(null);
     setResultado(null);
     setTiempoAnalisis(null);
     setError(null);
@@ -204,7 +197,8 @@ const PaginaAnalisis = ({ onNuevaSesion }) => {
         <div className="analisis-form-area">
           <EncuestaUtilidad
             registroId={registroId}
-            tipoDocumento={resultado?._categoria}
+            permisoAnalisis={permisoAnalisis}
+            tipoDocumento={resultado?.datos?._categoria}
             onFinalizar={manejarFinalizarEncuesta}
           />
         </div>

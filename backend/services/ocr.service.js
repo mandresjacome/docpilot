@@ -10,16 +10,15 @@
 // usando pdf-lib (todo en memoria, sin escritura en disco), procesa cada trozo
 // por separado y concatena el texto resultante.
 
-require('dotenv').config();
-
+const path = require('node:path');
 const https = require('https');
 const { GoogleAuth } = require('google-auth-library');
 const { PDFDocument } = require('pdf-lib');
 const { ErrorApp } = require('../utils/errores');
 const { MAX_PAGINAS_PDF } = require('./validacionArchivo.service');
+const { carpetaBackend } = require('../config/entorno');
 
-// En producción (Railway), las credenciales de GCP vienen como variable de entorno
-// GOOGLE_CREDENTIALS_JSON con el contenido completo del JSON de la cuenta de servicio.
+// GOOGLE_CREDENTIALS_JSON admite el contenido completo del JSON de la cuenta de servicio.
 // En desarrollo local, GoogleAuth las lee desde el archivo indicado en
 // GOOGLE_APPLICATION_CREDENTIALS.
 // Este bloque debe ejecutarse ANTES de crear el cliente GoogleAuth.
@@ -27,8 +26,9 @@ let credencialesGCP;
 if (process.env.GOOGLE_CREDENTIALS_JSON) {
   try {
     credencialesGCP = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-  } catch (e) {
-    throw new Error('GOOGLE_CREDENTIALS_JSON no es un JSON válido: ' + e.message);
+    if (!credencialesGCP || typeof credencialesGCP !== 'object' || Array.isArray(credencialesGCP)) throw new Error();
+  } catch {
+    throw new Error('GOOGLE_CREDENTIALS_JSON no es un JSON válido.');
   }
 }
 
@@ -37,6 +37,9 @@ if (process.env.GOOGLE_CREDENTIALS_JSON) {
 // Si no, GoogleAuth busca GOOGLE_APPLICATION_CREDENTIALS (desarrollo local).
 const auth = new GoogleAuth({
   credentials: credencialesGCP,
+  keyFilename: !credencialesGCP && process.env.GOOGLE_APPLICATION_CREDENTIALS
+    ? path.resolve(carpetaBackend, process.env.GOOGLE_APPLICATION_CREDENTIALS)
+    : undefined,
   scopes: 'https://www.googleapis.com/auth/cloud-platform',
 });
 
@@ -49,6 +52,7 @@ const LIMITE_PAGINAS = 14;
 
 // Tiempo máximo de espera por cada llamada a Document AI (ms)
 const TIMEOUT_OCR_MS = 60000;
+const MAX_RESPUESTA_OCR = 4 * 1024 * 1024;
 
 /**
  * enviarChunkOCR — envía UN buffer (≤ LIMITE_PAGINAS páginas) a Document AI.
@@ -59,15 +63,14 @@ const TIMEOUT_OCR_MS = 60000;
  * @param {string} token       - Token OAuth2 válido para autenticar con GCP
  * @returns {Promise<string>}  - Texto extraído del trozo
  */
-const enviarChunkOCR = (bufferChunk, mimeType, token) => {
+const enviarChunkOCR = (bufferChunk, mimeType, token, signal) => {
+  signal?.throwIfAborted();
   // Codificar el buffer en base64 — formato requerido por la API REST de Document AI
   const contenidoBase64 = bufferChunk.toString('base64');
 
-  // Construir el body JSON de la petición.
-  // No se incluye fieldMask porque el procesador configurado en este proyecto
-  // no soporta imageless mode independientemente del parámetro — la solución
-  // real es dividir el PDF en trozos que respeten el límite de 15 páginas.
+  // Solo hace falta el texto del OCR, incluso cuando el procesador devuelve otros campos.
   const cuerpo = JSON.stringify({
+    fieldMask: 'text',
     rawDocument: {
       content: contenidoBase64, // Contenido del trozo codificado en base64
       mimeType: mimeType,        // Tipo MIME para que el procesador identifique el formato
@@ -80,13 +83,25 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
   // Retornar una Promise que resuelve con el texto extraído del trozo.
   // Se usa https nativo de Node.js para evitar transformaciones inesperadas
   // de librerías intermedias (gaxios, axios) sobre el body JSON.
+  const limiteTiempo = AbortSignal.timeout(TIMEOUT_OCR_MS);
+  const signalPeticion = signal ? AbortSignal.any([signal, limiteTiempo]) : limiteTiempo;
+
   return new Promise((resolve, reject) => {
+    const errorRed = () => reject(new ErrorApp('No se pudo conectar con el servicio de OCR. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'OCR_NO_DISPONIBLE',
+    }));
+    const errorRespuesta = () => reject(new ErrorApp('El servicio de OCR devolvió una respuesta inválida. Intenta de nuevo.', {
+      status: 502,
+      codigo: 'OCR_RESPUESTA_INVALIDA',
+    }));
     const req = https.request(
       {
         hostname,
         path: rutaEndpoint,
         method: 'POST',
-        timeout: TIMEOUT_OCR_MS, // evita que una petición colgada retenga la solicitud indefinidamente
+        timeout: TIMEOUT_OCR_MS,
+        signal: signalPeticion,
         headers: {
           'Authorization': `Bearer ${token}`,          // Token OAuth2 de GCP
           'Content-Type': 'application/json',           // Body en formato JSON
@@ -94,39 +109,41 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
         },
       },
       (res) => {
-        let datos = '';
-        res.on('data', (chunk) => { datos += chunk; });
+        const datos = [];
+        let bytes = 0;
+        res.on('error', errorRed);
+        res.on('data', (chunk) => {
+          if (bytes > MAX_RESPUESTA_OCR) return;
+          const parte = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          bytes += parte.length;
+          if (bytes > MAX_RESPUESTA_OCR) {
+            errorRespuesta();
+            req.destroy();
+            return;
+          }
+          datos.push(parte);
+        });
         res.on('end', () => {
-          try {
-            const respuesta = JSON.parse(datos);
-            // Si Document AI devuelve un error HTTP, se conserva el detalle solo en la causa
-            // (para logs) y al usuario se le muestra un mensaje seguro.
-            if (res.statusCode >= 400) {
-              return reject(new ErrorApp('El servicio de OCR no pudo procesar el documento. Intenta de nuevo.', {
-                status: 502,
-                codigo: 'OCR_FALLIDO',
-                causa: new Error(respuesta.error?.message || `Error HTTP ${res.statusCode} de Document AI`),
-              }));
-            }
-            // Extraer el texto del documento procesado por Document AI
-            resolve(respuesta.document?.text || '');
-          } catch (errorParseo) {
-            reject(new ErrorApp('El servicio de OCR devolvió una respuesta inválida. Intenta de nuevo.', {
+          if (bytes > MAX_RESPUESTA_OCR) return;
+          if (res.statusCode >= 400) {
+            return reject(new ErrorApp('El servicio de OCR no pudo procesar el documento. Intenta de nuevo.', {
               status: 502,
-              codigo: 'OCR_RESPUESTA_INVALIDA',
-              causa: errorParseo,
+              codigo: 'OCR_FALLIDO',
             }));
+          }
+          try {
+            const respuesta = JSON.parse(Buffer.concat(datos, bytes).toString('utf8'));
+            const texto = respuesta.document?.text;
+            if (texto != null && typeof texto !== 'string') return errorRespuesta();
+            resolve(texto ?? '');
+          } catch {
+            errorRespuesta();
           }
         });
       }
     );
 
-    // Errores de red (DNS, conexión rechazada, etc.)
-    req.on('error', (errorRed) => reject(new ErrorApp('No se pudo conectar con el servicio de OCR. Intenta de nuevo.', {
-      status: 502,
-      codigo: 'OCR_NO_DISPONIBLE',
-      causa: errorRed,
-    })));
+    req.on('error', errorRed);
     // Inactividad del socket: destruir la petición dispara 'error' (OCR_NO_DISPONIBLE)
     req.on('timeout', () => req.destroy(new Error(`Document AI no respondió en ${TIMEOUT_OCR_MS} ms`)));
     req.write(cuerpo);       // Escribir el body JSON en la petición
@@ -140,14 +157,14 @@ const enviarChunkOCR = (bufferChunk, mimeType, token) => {
  *
  * @param {PDFDocument} docFuente - Documento ya cargado (así no se vuelve a parsear el archivo)
  * @param {number} maxPaginas     - Máximo de páginas por trozo
- * @returns {Promise<Buffer[]>}   - Array de buffers, uno por trozo
+ * @returns {AsyncGenerator<Buffer>} - Un trozo en memoria por iteración
  */
-const dividirPDFEnTrozos = async (docFuente, maxPaginas) => {
+async function* dividirPDFEnTrozos(docFuente, maxPaginas, signal) {
   const totalPaginas = docFuente.getPageCount();
-  const trozos = [];
 
   // Iterar en bloques de maxPaginas para crear cada trozo
   for (let inicio = 0; inicio < totalPaginas; inicio += maxPaginas) {
+    signal?.throwIfAborted();
     const fin = Math.min(inicio + maxPaginas, totalPaginas);
 
     // Índices base-0 de las páginas que van en este trozo
@@ -161,12 +178,9 @@ const dividirPDFEnTrozos = async (docFuente, maxPaginas) => {
     paginasCopiadas.forEach((pagina) => docTrozo.addPage(pagina));
 
     // Serializar el trozo a Buffer (sin escribir en disco)
-    const bufferTrozo = Buffer.from(await docTrozo.save());
-    trozos.push(bufferTrozo);
+    yield Buffer.from(await docTrozo.save());
   }
-
-  return trozos;
-};
+}
 
 /**
  * extraerTexto — punto de entrada público del servicio.
@@ -182,25 +196,29 @@ const dividirPDFEnTrozos = async (docFuente, maxPaginas) => {
  * @param {string} mimeType - Tipo MIME del archivo
  * @returns {Promise<string>} - Texto completo extraído del documento
  */
-const extraerTexto = async (buffer, mimeType) => {
+const extraerTexto = async (buffer, mimeType, signal) => {
   // Verificar que las variables de entorno necesarias están configuradas
-  if (!process.env.DOCUMENT_AI_PROJECT_ID || !process.env.DOCUMENT_AI_PROCESSOR_ID) {
-    throw new Error('Las variables de Document AI no están configuradas en el archivo .env');
+  if (!process.env.DOCUMENT_AI_PROJECT_ID || !process.env.DOCUMENT_AI_PROCESSOR_ID || !process.env.DOCUMENT_AI_LOCATION) {
+    throw new ErrorApp('Las variables de Document AI no están configuradas.', {
+      status: 503,
+      codigo: 'OCR_NO_CONFIGURADO',
+    });
   }
 
   // Obtener el token OAuth2 una sola vez para todas las peticiones de esta llamada
   let token;
+  signal?.throwIfAborted();
   try {
     token = await auth.getAccessToken();
-  } catch (errorAuth) {
+    if (!token) throw new Error();
+  } catch {
     throw new ErrorApp('No se pudo autenticar con el servicio de OCR. Intenta de nuevo más tarde.', {
       status: 502,
       codigo: 'OCR_AUTENTICACION_FALLIDA',
-      causa: errorAuth,
     });
   }
 
-  let textoFinal = '';
+  let textoFinal;
 
   if (mimeType === 'application/pdf') {
     // Para PDFs, verificar el número de páginas antes de enviar a Document AI.
@@ -211,11 +229,10 @@ const extraerTexto = async (buffer, mimeType) => {
     try {
       docPDF = await PDFDocument.load(buffer);
       totalPaginas = docPDF.getPageCount();
-    } catch (errorPDF) {
+    } catch {
       throw new ErrorApp('El PDF está dañado, protegido o no se puede leer.', {
         status: 422,
         codigo: 'PDF_ILEGIBLE',
-        causa: errorPDF,
       });
     }
 
@@ -230,12 +247,12 @@ const extraerTexto = async (buffer, mimeType) => {
     if (totalPaginas > LIMITE_PAGINAS) {
       // El PDF supera el límite — dividir en trozos y procesar cada uno
       // Cada trozo tiene como máximo LIMITE_PAGINAS páginas
-      const trozos = await dividirPDFEnTrozos(docPDF, LIMITE_PAGINAS);
+      const trozos = dividirPDFEnTrozos(docPDF, LIMITE_PAGINAS, signal);
 
       // Procesar los trozos en secuencia para evitar sobrecargar la cuota de la API
       const textosPorTrozo = [];
-      for (let i = 0; i < trozos.length; i++) {
-        const textoParcial = await enviarChunkOCR(trozos[i], mimeType, token);
+      for await (const trozo of trozos) {
+        const textoParcial = await enviarChunkOCR(trozo, mimeType, token, signal);
         textosPorTrozo.push(textoParcial);
       }
 
@@ -244,12 +261,12 @@ const extraerTexto = async (buffer, mimeType) => {
 
     } else {
       // PDF dentro del límite — enviar directamente sin dividir
-      textoFinal = await enviarChunkOCR(buffer, mimeType, token);
+      textoFinal = await enviarChunkOCR(buffer, mimeType, token, signal);
     }
 
   } else {
-    // Imágenes (PNG, JPEG, TIFF) — no tienen límite de páginas, enviar directamente
-    textoFinal = await enviarChunkOCR(buffer, mimeType, token);
+    // Las imágenes y TIFF ya validados caben en una petición.
+    textoFinal = await enviarChunkOCR(buffer, mimeType, token, signal);
   }
 
   // Verificar que se extrajo contenido útil del documento

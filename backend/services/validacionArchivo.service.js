@@ -19,6 +19,10 @@ const TAMANO_MAXIMO = 10 * 1024 * 1024;
 // Páginas máximas por PDF. Un PDF diminuto puede declarar decenas de miles de páginas y cada 14
 // generarían una llamada de pago a Document AI; 100 páginas (≈ 8 llamadas) cubre documentos reales.
 const MAX_PAGINAS_PDF = 100;
+const MAX_PIXELES_POR_IMAGEN = 40_000_000;
+const MAX_PAGINAS_TIFF = 14;
+const MAX_PIXELES_TIFF = 120_000_000;
+const TAGS_TIFF = new Set([256, 257, 273, 279, 324, 325, 330]);
 
 // Formatos admitidos: MIME → etiqueta legible y extensiones válidas
 const TIPOS_PERMITIDOS = {
@@ -94,14 +98,16 @@ const validarPNG = (buffer) => {
       const ancho = buffer.readUInt32BE(pos + 8);
       const alto = buffer.readUInt32BE(pos + 12);
       if (ancho === 0 || alto === 0) return 'el PNG declara dimensiones inválidas';
+      if (ancho * alto > MAX_PIXELES_POR_IMAGEN) return 'el PNG supera los 40 megapíxeles';
       primerChunk = false;
     }
 
     // El CRC cubre tipo + datos; una diferencia indica corrupción o manipulación
     if (crc32(buffer.subarray(pos + 4, pos + 8 + longitud)) !== buffer.readUInt32BE(pos + 8 + longitud)) {
-      return `el chunk ${tipo} del PNG está corrupto`;
+      return 'un bloque del PNG está corrupto';
     }
 
+    if (tipo === 'acTL') return 'el PNG animado no es compatible';
     if (tipo === 'IDAT') idatVisto = true;
     if (tipo === 'IEND') {
       if (!idatVisto) return 'el PNG no contiene datos de imagen';
@@ -137,6 +143,7 @@ const validarJPEG = (buffer) => {
       const alto = buffer.readUInt16BE(pos + 3);
       const ancho = buffer.readUInt16BE(pos + 5);
       if (alto === 0 || ancho === 0) return 'el JPEG declara dimensiones inválidas';
+      if (ancho * alto > MAX_PIXELES_POR_IMAGEN) return 'el JPEG supera los 40 megapíxeles';
       sofVisto = true;
     }
 
@@ -157,34 +164,50 @@ const validarTIFF = (buffer) => {
   const leer32 = (o) => (little ? buffer.readUInt32LE(o) : buffer.readUInt32BE(o));
 
   if (buffer.length < 8) return 'el archivo TIFF está incompleto';
-  const offsetIFD = leer32(4);
-  if (offsetIFD < 8 || offsetIFD + 2 > buffer.length) return 'el directorio del TIFF está fuera del archivo';
+  const visitados = new Set();
+  let pixelesTotales = 0;
+  let offsetIFD = leer32(4);
 
-  const entradas = leer16(offsetIFD);
-  if (entradas === 0 || offsetIFD + 2 + entradas * 12 > buffer.length) return 'el directorio del TIFF está truncado';
+  do {
+    if (offsetIFD < 8 || offsetIFD + 2 > buffer.length) return 'el directorio del TIFF está fuera del archivo';
+    if (visitados.has(offsetIFD)) return 'la cadena de páginas del TIFF contiene un ciclo';
+    if (visitados.size >= MAX_PAGINAS_TIFF) return `el TIFF supera las ${MAX_PAGINAS_TIFF} páginas`;
+    visitados.add(offsetIFD);
 
-  // Recorrer las entradas buscando ancho, alto y la ubicación de los datos de imagen
-  const tags = {};
-  for (let i = 0; i < entradas; i++) {
-    const o = offsetIFD + 2 + i * 12;
-    const tag = leer16(o);
-    const tipo = leer16(o + 2);
-    const cantidad = leer32(o + 4);
-    // Los valores SHORT/LONG individuales viven dentro de la propia entrada
-    const valor = tipo === 3 ? leer16(o + 8) : leer32(o + 8);
-    tags[tag] = { cantidad, valor };
-  }
+    const entradas = leer16(offsetIFD);
+    const siguienteIFD = offsetIFD + 2 + entradas * 12;
+    if (entradas === 0 || siguienteIFD + 4 > buffer.length) return 'el directorio del TIFF está truncado';
 
-  if (!tags[256] || !tags[257] || tags[256].valor === 0 || tags[257].valor === 0) {
-    return 'el TIFF no declara dimensiones válidas';
-  }
-  const datos = tags[273] || tags[324]; // StripOffsets o TileOffsets
-  if (!datos) return 'el TIFF no contiene datos de imagen';
+    const tags = new Map();
+    for (let o = offsetIFD + 2; o < siguienteIFD; o += 12) {
+      const tag = leer16(o);
+      if (!TAGS_TIFF.has(tag)) continue;
+      if (tag === 330) return 'el TIFF contiene subdirectorios de imagen no compatibles';
+      const tipo = leer16(o + 2);
+      const cantidad = leer32(o + 4);
+      if (tags.has(tag) || ![3, 4].includes(tipo) || cantidad === 0) return 'el directorio del TIFF es inválido';
+      const valor = tipo === 3 && cantidad === 1 ? leer16(o + 8) : leer32(o + 8);
+      tags.set(tag, { cantidad, valor });
+    }
 
-  // Con una sola franja es posible comprobar que sus datos caben en el archivo
-  if (tags[273] && tags[273].cantidad === 1 && tags[279] && tags[279].cantidad === 1) {
-    if (tags[273].valor + tags[279].valor > buffer.length) return 'el archivo TIFF está truncado';
-  }
+    const ancho = tags.get(256);
+    const alto = tags.get(257);
+    if (ancho?.cantidad !== 1 || alto?.cantidad !== 1 || ancho.valor === 0 || alto.valor === 0) {
+      return 'el TIFF no declara dimensiones válidas';
+    }
+    const pixeles = ancho.valor * alto.valor;
+    if (pixeles > MAX_PIXELES_POR_IMAGEN) return 'una página del TIFF supera los 40 megapíxeles';
+    pixelesTotales += pixeles;
+    if (pixelesTotales > MAX_PIXELES_TIFF) return 'el TIFF supera los 120 megapíxeles en total';
+
+    const datos = tags.get(273) || tags.get(324);
+    const longitud = tags.has(273) ? tags.get(279) : tags.get(325);
+    if (!datos) return 'el TIFF no contiene datos de imagen';
+    if (datos.cantidad === 1 && longitud?.cantidad === 1 && datos.valor + longitud.valor > buffer.length) {
+      return 'el archivo TIFF está truncado';
+    }
+    offsetIFD = leer32(siguienteIFD);
+  } while (offsetIFD !== 0);
   return null;
 };
 
@@ -241,9 +264,9 @@ const validarContenidoArchivo = async (archivo) => {
   if (buffer.length > TAMANO_MAXIMO) {
     throw rechazar('El archivo supera el tamaño máximo permitido de 10 MB.', 'ARCHIVO_DEMASIADO_GRANDE');
   }
-  if (!TIPOS_PERMITIDOS[mimetype]) {
+  if (!Object.hasOwn(TIPOS_PERMITIDOS, mimetype)) {
     throw rechazar(
-      `Tipo de archivo no permitido: ${mimetype}. Solo se aceptan PDF, PNG, JPEG o TIFF.`,
+      'Tipo de archivo no permitido. Solo se aceptan PDF, PNG, JPEG o TIFF.',
       'TIPO_NO_PERMITIDO'
     );
   }

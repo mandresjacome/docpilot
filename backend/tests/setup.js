@@ -10,6 +10,10 @@ process.env.DOCUMENT_AI_PROJECT_ID = 'proyecto-prueba';
 process.env.DOCUMENT_AI_LOCATION = 'us';
 process.env.DOCUMENT_AI_PROCESSOR_ID = 'procesador-prueba';
 process.env.ADMIN_TOKEN = 'token-admin-de-prueba';
+delete process.env.GEMINI_MODEL;
+delete process.env.HOST;
+delete process.env.GOOGLE_CREDENTIALS_JSON;
+delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
 // Silencia los console.error/log esperados (los tests verifican el comportamiento, no los logs)
 jest.spyOn(console, 'error').mockImplementation(() => {});

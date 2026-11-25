@@ -2,8 +2,6 @@
 // Muestra la arquitectura, el stack tecnológico, el flujo de funcionamiento
 // y los tipos de documentos soportados.
 
-import React from 'react';
-
 // ── Datos del stack tecnológico ──
 const TECNOLOGIAS = [
   {
@@ -19,7 +17,7 @@ const TECNOLOGIAS = [
     categoria: 'Backend',
     icono: '🖥️',
     items: [
-      { nombre: 'Node.js 18+', descripcion: 'Entorno de ejecución JavaScript del lado del servidor' },
+      { nombre: 'Node.js 24', descripcion: 'Entorno de ejecución JavaScript del lado del servidor' },
       { nombre: 'Express 4', descripcion: 'Framework web minimalista para la API REST' },
       { nombre: 'Multer (memoryStorage)', descripcion: 'Recepción de archivos en buffer RAM — sin escritura en disco' },
       { nombre: 'pdf-lib', descripcion: 'Lectura de PDFs y división en bloques de 14 páginas, en memoria, para respetar el límite de Document AI' },
@@ -30,7 +28,7 @@ const TECNOLOGIAS = [
     icono: '🤖',
     items: [
       { nombre: 'Google Cloud Document AI', descripcion: 'OCR de alta precisión para extracción de texto en documentos PDF e imágenes' },
-      { nombre: 'Google Gemini 2.5 Flash', descripcion: 'Modelo de lenguaje para clasificación en dos fases, análisis profundo y sugerencias de respuesta' },
+      { nombre: 'Google Gemini 3.5 Flash-Lite', descripcion: 'Modelo predeterminado y configurable para clasificar, analizar y sugerir una respuesta' },
     ],
   },
   {
@@ -41,10 +39,10 @@ const TECNOLOGIAS = [
     ],
   },
   {
-    categoria: 'Despliegue',
+    categoria: 'Ejecución local',
     icono: '🚀',
     items: [
-      { nombre: 'Railway', descripcion: 'Plataforma de despliegue unificada — sirve el backend Node.js y el frontend React desde un único servicio' },
+      { nombre: 'Express', descripcion: 'Puede servir la API y el frontend compilado desde el mismo origen' },
     ],
   },
 ];
@@ -149,7 +147,7 @@ const PaginaAcercaDe = () => {
             <div className="arq-capa arq-capa-frontend">
               <span className="arq-icono">⚛️</span>
               <strong>Frontend React</strong>
-              <small>Servido por Express · Railway</small>
+              <small>Frontend React y Vite</small>
             </div>
           </div>
           <div className="arq-flecha">
@@ -161,7 +159,7 @@ const PaginaAcercaDe = () => {
             <div className="arq-capa arq-capa-backend">
               <span className="arq-icono">🖥️</span>
               <strong>Backend Node.js</strong>
-              <small>Express · Railway</small>
+              <small>API REST con Express</small>
             </div>
           </div>
           <div className="arq-flecha">
@@ -178,7 +176,7 @@ const PaginaAcercaDe = () => {
               </div>
               <div className="arq-capa arq-capa-gemini">
                 <span className="arq-icono">✨</span>
-                <strong>Gemini 2.5 Flash</strong>
+                <strong>Gemini 3.5 Flash-Lite</strong>
                 <small>IA Generativa · Google</small>
               </div>
             </div>

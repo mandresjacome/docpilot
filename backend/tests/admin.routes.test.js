@@ -11,13 +11,35 @@ const supabaseMock = require('./helpers/supabaseMock');
 const TOKEN = process.env.ADMIN_TOKEN;
 const ID = '3f2b8c1e-9d4a-4b6e-8f10-2a7c5d9e1b34';
 
-beforeEach(() => supabaseMock.reiniciar());
+let ahora = Date.now();
+beforeEach(() => {
+  ahora += 61_000;
+  jest.spyOn(Date, 'now').mockImplementation(() => ahora);
+  supabaseMock.reiniciar();
+});
+afterEach(() => Date.now.mockRestore());
 
 const REGISTROS = [
   { id: 'a', fecha_hora: '2026-05-03', tipo_documento: 'factura', confirmado: true, estrellas: 5, tiempo_ahorrado: '10-30 min', tiempo_ms: 2000, comentario: 'ok' },
   { id: 'b', fecha_hora: '2026-05-02', tipo_documento: 'factura', confirmado: false, estrellas: 3, tiempo_ahorrado: '10-30 min', tiempo_ms: 4000, comentario: null },
   { id: 'c', fecha_hora: '2026-05-01', tipo_documento: 'contrato', confirmado: true, estrellas: null, tiempo_ahorrado: null, tiempo_ms: null, comentario: null },
 ];
+
+test('el panel limita peticiones antes de verificar el token y se recupera al vencer la ventana', async () => {
+  const dashboard = () => request(app).get('/api/admin/dashboard');
+  for (let i = 0; i < 25; i++) {
+    expect((await dashboard().set('x-admin-token', 'token-ficticio-incorrecto')).status).toBe(401);
+  }
+  const limitada = await dashboard().set('x-admin-token', TOKEN);
+  expect(limitada.status).toBe(429);
+  expect(limitada.headers['retry-after']).toBe('60');
+  expect(supabaseMock.llamadas).toHaveLength(0);
+
+  ahora += 60_000;
+  const autorizada = await dashboard().set('x-admin-token', TOKEN);
+  expect(autorizada.status).toBe(200);
+  expect(autorizada.headers['cache-control']).toBe('no-store');
+});
 
 describe('autorización de /api/admin', () => {
   const rutas = [

@@ -2,12 +2,17 @@
 // Se separa de app.js para poder importar la app en tests unitarios
 // sin que el servidor quede escuchando durante las pruebas.
 
+const { createServer } = require('node:http');
 const app = require('./app');
+const { HOST_LOCAL } = require('./config/entorno');
 
 // Puerto configurable por variable de entorno para flexibilidad entre
 // entornos de desarrollo, staging y producción
-const PUERTO = process.env.PORT || 3001;
+const puerto = Number(process.env.PORT || 3001);
+const host = process.env.HOST || HOST_LOCAL;
 
-app.listen(PUERTO, () => {
-  console.log(`Servidor backend corriendo en http://localhost:${PUERTO}`);
+const servidor = createServer({ headersTimeout: 15_000, requestTimeout: 60_000 }, app);
+servidor.listen(puerto, host, () => {
+  const { address, port } = servidor.address();
+  console.log(`Servidor backend escuchando en ${address} (puerto ${port})`);
 });

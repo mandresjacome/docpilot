@@ -1,10 +1,9 @@
 # Archivos ignorados por Git
 
 # Variables de entorno con credenciales reales (NUNCA al repositorio)
-.env
-backend/.env
-frontend/.env
-frontend/.env.local
+.env*
+*.env
+!.env.example
 
 # Credenciales de Google Cloud
 backend/credenciales/
@@ -24,7 +23,3 @@ npm-debug.log*
 # Cobertura de pruebas
 backend/coverage/
 coverage/
-
-# Archivos de deploy alternativos (no utilizados)
-backend/railway.json
-frontend/vercel.json

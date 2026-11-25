@@ -6,9 +6,10 @@
 const express = require('express');
 const router  = express.Router();
 const { verificarToken, obtenerDashboard, eliminarRegistroAdmin, limpiarRegistrosAdmin } = require('../controllers/admin.controller');
+const { limitarPeticiones } = require('../middlewares/limites');
 
 // Aplicar la verificación de token a TODAS las rutas de este router
-router.use(verificarToken);
+router.use(limitarPeticiones(25), verificarToken);
 
 // GET /api/admin/dashboard
 // Devuelve métricas agregadas y actividad reciente para el panel de administración

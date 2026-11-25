@@ -67,6 +67,50 @@ describe('validarContenidoArchivo — archivos válidos', () => {
   });
 });
 
+describe('validarContenidoArchivo — límites de imagen', () => {
+  const tiff = (buffer) => ({ buffer, mimetype: 'image/tiff', originalname: 'scan.tiff' });
+
+  test('rechaza PNG y JPEG con más de 40 megapíxeles declarados', async () => {
+    const png = crearPNG({ ancho: 8_000, alto: 8_000 });
+    const jpeg = crearJPEG();
+    const sof = jpeg.indexOf(Buffer.from([0xff, 0xc0]));
+    jpeg.writeUInt16BE(8_000, sof + 5);
+    jpeg.writeUInt16BE(8_000, sof + 7);
+
+    for (const archivo of [
+      { buffer: png, mimetype: 'image/png', originalname: 'scan.png' },
+      { buffer: jpeg, mimetype: 'image/jpeg', originalname: 'scan.jpg' },
+    ]) {
+      await expect(validarContenidoArchivo(archivo)).rejects.toMatchObject({
+        codigo: 'ARCHIVO_DANADO', message: expect.stringContaining('40 megapíxeles'),
+      });
+    }
+  });
+
+  test('acepta un TIFF de 14 páginas y rechaza uno de 15', async () => {
+    expect(await resultado(tiff(crearTIFF({ paginas: 14 })))).toBe('OK');
+    await expect(validarContenidoArchivo(tiff(crearTIFF({ paginas: 15 })))).rejects.toMatchObject({
+      codigo: 'ARCHIVO_DANADO', message: expect.stringContaining('14 páginas'),
+    });
+  });
+
+  test('comprueba las dimensiones de las páginas TIFF posteriores a la primera', async () => {
+    const buffer = crearTIFF({ paginas: 2 });
+    buffer.writeUInt16LE(8_000, 62 + 2 + 8);
+    buffer.writeUInt16LE(8_000, 62 + 2 + 12 + 8);
+    await expect(validarContenidoArchivo(tiff(buffer))).rejects.toMatchObject({
+      codigo: 'ARCHIVO_DANADO', message: expect.stringContaining('40 megapíxeles'),
+    });
+  });
+
+  test('limita el total de píxeles acumulado de un TIFF', async () => {
+    const buffer = crearTIFF({ paginas: 4, ancho: 6_000, alto: 6_000 });
+    await expect(validarContenidoArchivo(tiff(buffer))).rejects.toMatchObject({
+      codigo: 'ARCHIVO_DANADO', message: expect.stringContaining('120 megapíxeles en total'),
+    });
+  });
+});
+
 describe('validarContenidoArchivo — rechazos por metadatos', () => {
   test('rechaza un archivo vacío', async () => {
     expect(await resultado({ buffer: Buffer.alloc(0), mimetype: 'application/pdf', originalname: 'a.pdf' }))

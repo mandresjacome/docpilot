@@ -2,6 +2,8 @@
 // Se centraliza aquí la inicialización del servidor, middlewares globales
 // y el registro de rutas, para mantener el código modular y fácil de escalar.
 
+require('./config/entorno');
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -32,7 +34,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Parsear el cuerpo de las solicitudes JSON
-app.use(express.json());
+app.use(express.json({ limit: '8kb' }));
 
 // --- Registro de rutas API ---
 
@@ -55,7 +57,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(rutaFrontend));
 
   // Para cualquier ruta que no sea /api, devolver el index.html de React.
-  // Esto permite que React Router maneje la navegación en el cliente.
+  // React se encarga de la navegación de la interfaz.
   app.get('*', (req, res) => {
     res.sendFile(path.join(rutaFrontend, 'index.html'));
   });

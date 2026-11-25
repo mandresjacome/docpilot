@@ -6,41 +6,30 @@
 // IMPORTANTE: Express identifica este middleware como manejador de errores
 // por la firma de CUATRO parámetros (err, req, res, next). No omitir ninguno.
 
-// Limpia un texto antes de escribirlo en el log: algunos mensajes (p. ej. el error de un JSON mal
-// formado) incluyen fragmentos de lo que envió el cliente, y los saltos de línea permitirían
-// falsear líneas del log. Se reemplazan los caracteres de control y se acota la longitud.
-const limpiarParaLog = (texto) => String(texto).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 500);
+const { ErrorApp } = require('../utils/errores');
 
-const errorHandler = (err, req, res, next) => {
-  // Si la respuesta ya empezó a enviarse, Express debe cerrar la conexión por defecto
-  if (res.headersSent) return next(err);
+const errorHandler = (err, req, res, _next) => {
+  if (res.headersSent) return res.destroy();
 
-  // Si el código de estado ya fue definido en el error, usarlo;
-  // de lo contrario, asumir error interno del servidor (500)
-  const estado = err.status || err.statusCode || 500;
-  const esProduccion = process.env.NODE_ENV === 'production';
+  const controlado = err instanceof ErrorApp;
+  const estadoOriginal = err.status || err.statusCode;
+  const estado = Number.isInteger(estadoOriginal) && estadoOriginal >= 400 && estadoOriginal <= 599
+    ? estadoOriginal : 500;
+  const codigo = controlado ? err.codigo : 'ERROR_SOLICITUD';
 
-  // Los fallos del servidor (5xx) se registran siempre, también en producción:
-  // sin este log un error de Supabase o de IA sería invisible en Railway.
-  // Nunca se registra el contenido de documentos, solo mensaje y causa técnica.
-  if (estado >= 500 || !esProduccion) {
-    console.error(`[Error ${estado}]${err.codigo ? ` (${err.codigo})` : ''}`, limpiarParaLog(err.message));
-    if (err.causa) console.error('  Causa:', limpiarParaLog(err.causa.message || err.causa));
-    // El stack completo (varias líneas) solo ayuda a depurar fallos del servidor en desarrollo
-    if (!esProduccion && estado >= 500 && err.stack) console.error(err.stack);
+  // Los errores de bibliotecas y proveedores pueden incluir secretos o fragmentos de datos.
+  if (estado >= 500) {
+    console.error(`[Error ${estado}] (${controlado ? codigo : 'ERROR_INTERNO'})`);
   }
 
-  // En producción, un 5xx no controlado (sin `expose`) podría revelar detalles internos
-  // (rutas, proyectos de GCP, mensajes de librerías): se responde un mensaje genérico.
-  const ocultarDetalle = esProduccion && estado >= 500 && !err.expose;
-  const mensaje = ocultarDetalle
-    ? 'Ocurrió un error interno en el servidor.'
-    : err.message || 'Ocurrió un error interno en el servidor.';
-
-  const cuerpo = { error: mensaje };
-  if (err.codigo) cuerpo.codigo = err.codigo;
-
-  res.status(estado).json(cuerpo);
+  if (controlado) return res.status(estado).json({ error: err.message, codigo });
+  if (estado === 413) {
+    return res.status(estado).json({ error: 'La solicitud es demasiado grande.', codigo: 'SOLICITUD_DEMASIADO_GRANDE' });
+  }
+  if (estado < 500) {
+    return res.status(estado).json({ error: 'La solicitud no se pudo interpretar.', codigo });
+  }
+  res.status(estado).json({ error: 'Ocurrió un error interno en el servidor.', codigo: 'ERROR_INTERNO' });
 };
 
 module.exports = errorHandler;

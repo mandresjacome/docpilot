@@ -7,7 +7,7 @@
 // El modal se muestra si localStorage NO tiene la clave 'docpilot_consentimiento_v1'.
 // Las pestañas permiten cambiar entre el módulo de análisis y la ficha técnica.
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import PaginaAnalisis from './pages/PaginaAnalisis';
 import PaginaAcercaDe from './pages/PaginaAcercaDe';
 import PaginaAdmin from './pages/PaginaAdmin';
@@ -22,15 +22,7 @@ const App = () => {
 
   // Controla si el modal de tratamiento de datos es visible.
   // Se inicializa verificando localStorage para no molestar a usuarios que ya aceptaron.
-  const [mostrarModal, setMostrarModal] = useState(false);
-
-  useEffect(() => {
-    // Mostrar el modal solo si el usuario no ha aceptado antes en este navegador
-    const yaAcepto = localStorage.getItem(CLAVE_CONSENTIMIENTO);
-    if (!yaAcepto) {
-      setMostrarModal(true);
-    }
-  }, []);
+  const [mostrarModal, setMostrarModal] = useState(() => !localStorage.getItem(CLAVE_CONSENTIMIENTO));
 
   /**
    * manejarAceptacionModal — se ejecuta cuando el usuario acepta el tratamiento.

@@ -21,9 +21,9 @@ const storage = multer.memoryStorage();
 // Es la primera barrera (MIME declarado); la verificación del contenido real
 // se hace después, cuando el buffer ya está disponible.
 const fileFilter = (req, file, cb) => {
-  if (!TIPOS_PERMITIDOS[file.mimetype]) {
+  if (!Object.hasOwn(TIPOS_PERMITIDOS, file.mimetype)) {
     return cb(new ErrorApp(
-      `Tipo de archivo no permitido: ${file.mimetype}. Solo se aceptan PDF, PNG, JPEG o TIFF.`,
+      'Tipo de archivo no permitido. Solo se aceptan PDF, PNG, JPEG o TIFF.',
       { status: 400, codigo: 'TIPO_NO_PERMITIDO' }
     ), false);
   }
@@ -34,7 +34,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: TAMANO_MAXIMO, files: 1 },
+  limits: { fileSize: TAMANO_MAXIMO, files: 1, fields: 0, parts: 1 },
 });
 
 // Traduce los errores propios de multer (en inglés) a mensajes en español con código estable
@@ -59,7 +59,6 @@ const traducirErrorMulter = (err) => {
   return new ErrorApp('No se pudo leer el archivo enviado. Verifica que la carga esté completa.', {
     status: 400,
     codigo: 'CARGA_INVALIDA',
-    causa: err,
   });
 };
 

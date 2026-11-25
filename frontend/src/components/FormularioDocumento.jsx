@@ -2,7 +2,7 @@
 // Responsabilidad: capturar el archivo del usuario, validarlo en el cliente
 // (antes de cualquier llamada al servidor) y notificar al componente padre.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 // Tipos de archivo aceptados — deben coincidir con los validados en el backend
 const TIPOS_PERMITIDOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/tiff'];

@@ -8,11 +8,19 @@
 //   - Distribución por tipo de documento
 //   - Tabla de actividad reciente (últimos 10 registros)
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import adminService from '../services/admin.service';
 
 // Clave para sessionStorage — expira al cerrar la pestaña
 const CLAVE_TOKEN_SESION = 'docpilot_admin_token';
+
+const ETIQUETAS_TIPO = new Map([
+  ['contrato', 'Contrato'], ['factura', 'Factura'], ['pqrs', 'PQRS'],
+  ['documento_judicial', 'Documento judicial'], ['carta', 'Carta'],
+  ['cotizacion', 'Cotización'], ['otro', 'Otro'],
+]);
+
+const etiquetaTipo = (tipo) => ETIQUETAS_TIPO.get(tipo) || tipo || '—';
 
 // Mapeo de claves internas de tiempo_ahorrado a etiquetas legibles
 const ETIQUETAS_TIEMPO = {
@@ -48,7 +56,7 @@ const PaginaAdmin = () => {
   const [dashboard, setDashboard] = useState(null);
 
   // Estado de carga y error para feedback al usuario
-  const [cargando, setCargando] = useState(false);
+  const [cargando, setCargando] = useState(Boolean(tokenAutenticado));
   const [error, setError] = useState(null);
 
   // ID del registro que se está eliminando — muestra spinner en esa fila
@@ -61,23 +69,22 @@ const PaginaAdmin = () => {
    * cargarDashboard — llama al servicio admin y actualiza el estado.
    * Se extrae como función reutilizable para poder refrescar los datos.
    */
-  const cargarDashboard = useCallback(async (token) => {
-    setCargando(true);
-    setError(null);
-    try {
-      const datos = await adminService.obtenerDashboard(token);
-      setDashboard(datos);
-    } catch (err) {
+  const cargarDashboard = useCallback((token, signal) => adminService.obtenerDashboard(token, signal)
+    .then((datos) => {
+      if (!signal?.aborted) setDashboard(datos);
+    })
+    .catch((err) => {
+      if (signal?.aborted) return;
       setError(err.message);
-      // Si el token es inválido, limpiar la sesión para volver al formulario
       if (err.message.includes('incorrecto')) {
         sessionStorage.removeItem(CLAVE_TOKEN_SESION);
+        setCargando(false);
         setTokenAutenticado(null);
       }
-    } finally {
-      setCargando(false);
-    }
-  }, []);
+    })
+    .finally(() => {
+      if (!signal?.aborted) setCargando(false);
+    }), []);
 
   /**
    * manejarAcceso — guarda el token y actualiza el estado.
@@ -85,11 +92,14 @@ const PaginaAdmin = () => {
    */
   const manejarAcceso = (e) => {
     e.preventDefault();
-    if (!tokenInput.trim()) return;
+    const token = tokenInput.trim();
+    if (!token) return;
     // Guardar el token en sessionStorage para persistir dentro de la misma pestaña
-    sessionStorage.setItem(CLAVE_TOKEN_SESION, tokenInput.trim());
+    sessionStorage.setItem(CLAVE_TOKEN_SESION, token);
+    setCargando(true);
+    setError(null);
     // Esto dispara el useEffect que llama a cargarDashboard
-    setTokenAutenticado(tokenInput.trim());
+    setTokenAutenticado(token);
   };
 
   /**
@@ -97,9 +107,10 @@ const PaginaAdmin = () => {
    * Se usa useEffect para evitar llamadas durante el render (anti-patrón React).
    */
   useEffect(() => {
-    if (tokenAutenticado) {
-      cargarDashboard(tokenAutenticado);
-    }
+    if (!tokenAutenticado) return;
+    const cancelacion = new AbortController();
+    cargarDashboard(tokenAutenticado, cancelacion.signal);
+    return () => cancelacion.abort();
   }, [tokenAutenticado, cargarDashboard]);
 
   /**
@@ -110,8 +121,15 @@ const PaginaAdmin = () => {
     setTokenAutenticado(null);
     setDashboard(null);
     setTokenInput('');
+    setCargando(false);
     setError(null);
     setConfirmandoLimpiar(false);
+  };
+
+  const actualizarDashboard = () => {
+    setCargando(true);
+    setError(null);
+    return cargarDashboard(tokenAutenticado);
   };
 
   /**
@@ -121,8 +139,7 @@ const PaginaAdmin = () => {
     setEliminandoId(id);
     try {
       await adminService.eliminarRegistro(tokenAutenticado, id);
-      // Recargar el dashboard para reflejar la eliminación
-      await cargarDashboard(tokenAutenticado);
+      await actualizarDashboard();
     } catch (err) {
       setError(`Error al eliminar: ${err.message}`);
     } finally {
@@ -139,7 +156,7 @@ const PaginaAdmin = () => {
       setCargando(true);
       await adminService.limpiarRegistros(tokenAutenticado);
       setConfirmandoLimpiar(false);
-      await cargarDashboard(tokenAutenticado);
+      await actualizarDashboard();
     } catch (err) {
       setError(`Error al limpiar: ${err.message}`);
       setConfirmandoLimpiar(false);
@@ -256,7 +273,7 @@ const PaginaAdmin = () => {
               .sort(([, a], [, b]) => b - a) // Ordenar de mayor a menor
               .map(([tipo, cantidad]) => (
                 <div key={tipo} className="tipo-barra-fila">
-                  <span className="tipo-nombre">{tipo}</span>
+                  <span className="tipo-nombre">{etiquetaTipo(tipo)}</span>
                   <div className="barra-contenedor">
                     <div
                       className="barra-relleno"
@@ -320,7 +337,7 @@ const PaginaAdmin = () => {
                 {actividadReciente.map((r) => (
                   <tr key={r.id}>
                     <td>{formatearFecha(r.fecha_hora)}</td>
-                    <td>{r.tipo_documento || '—'}</td>
+                    <td>{etiquetaTipo(r.tipo_documento)}</td>
                     <td>{r.confirmado ? '✅' : '—'}</td>
                     <td>{r.estrellas ? `${r.estrellas} ★` : '—'}</td>
                     <td>{r.tiempo_ahorrado ? ETIQUETAS_TIEMPO[r.tiempo_ahorrado] || r.tiempo_ahorrado : '—'}</td>
@@ -348,7 +365,7 @@ const PaginaAdmin = () => {
       <div className="admin-footer">
         <button
           className="btn-secundario"
-          onClick={() => cargarDashboard(tokenAutenticado)}
+          onClick={actualizarDashboard}
           disabled={cargando}
         >
           Actualizar datos

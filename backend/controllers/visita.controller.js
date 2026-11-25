@@ -2,7 +2,7 @@
 // Propósito: dejar en los logs del servidor una línea que indique que un usuario aceptó
 // el aviso de tratamiento de datos. No guarda nada en base de datos ni en archivos y
 // NO recibe ni registra datos personales (ni correo, ni IP propia de la aplicación).
-// Los logs los conserva la plataforma de despliegue (p. ej. Railway) según su política.
+// El entorno de ejecución define la retención de los logs.
 
 /**
  * registrarVisita

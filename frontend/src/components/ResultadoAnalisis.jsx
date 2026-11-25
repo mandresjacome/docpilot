@@ -9,8 +9,6 @@
 // En lugar de hardcodear cada campo, se itera sobre las claves del objeto
 // datosRelevantes para renderizar automáticamente lo que venga del backend.
 
-import React from 'react';
-
 // Convierte una clave camelCase o snake_case en texto legible con espacios.
 // Ejemplo: "valorYPago" → "Valor Y Pago" | "fecha_emision" → "Fecha Emision"
 const formatearEtiqueta = (clave) => {
@@ -78,7 +76,7 @@ const ResultadoAnalisis = ({ datos, onConfirmar, cargando, tiempoAnalisis }) => 
     try {
       const texto = analisis.sugerenciaRespuesta || '';
       if (texto) await navigator.clipboard.writeText(texto);
-    } catch (e) {
+    } catch {
       // No bloquear el flujo si el portapapeles falla
     }
     onConfirmar();

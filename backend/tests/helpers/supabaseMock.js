@@ -5,6 +5,7 @@
 
 const estado = {
   respuesta: { data: null, error: null },
+  cola: [],
   excepcion: null,
 };
 
@@ -13,7 +14,7 @@ const llamadas = [];
 // Cada método registra su invocación y devuelve la misma consulta "thenable":
 // al hacer `await consulta` se resuelve con la respuesta configurada (o se rechaza).
 const consulta = {};
-['insert', 'update', 'delete', 'select', 'eq', 'not', 'order', 'limit', 'single'].forEach((metodo) => {
+['insert', 'update', 'delete', 'select', 'eq', 'is', 'not', 'order', 'limit', 'single'].forEach((metodo) => {
   consulta[metodo] = jest.fn((...args) => {
     llamadas.push({ metodo, args });
     return consulta;
@@ -23,7 +24,7 @@ consulta.then = (resolver, rechazar) =>
   Promise.resolve()
     .then(() => {
       if (estado.excepcion) throw estado.excepcion;
-      return estado.respuesta;
+      return estado.cola.shift() ?? estado.respuesta;
     })
     .then(resolver, rechazar);
 
@@ -40,6 +41,10 @@ const responder = (respuesta) => {
   estado.excepcion = null;
 };
 
+const responderEnOrden = (...respuestas) => {
+  estado.cola = respuestas;
+};
+
 /** Hace que las consultas lancen una excepción (p. ej. caída de red). */
 const lanzar = (error) => {
   estado.excepcion = error;
@@ -47,10 +52,11 @@ const lanzar = (error) => {
 
 const reiniciar = () => {
   estado.respuesta = { data: null, error: null };
+  estado.cola = [];
   estado.excepcion = null;
   llamadas.length = 0;
 };
 
 const llamo = (metodo) => llamadas.filter((l) => l.metodo === metodo);
 
-module.exports = { cliente, responder, lanzar, reiniciar, llamadas, llamo };
+module.exports = { cliente, responder, responderEnOrden, lanzar, reiniciar, llamadas, llamo };

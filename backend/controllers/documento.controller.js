@@ -7,9 +7,20 @@ const ocrService       = require('../services/ocr.service');
 const geminiService    = require('../services/gemini.service');
 const supabaseService  = require('../services/supabase.service');
 const { ErrorApp, esUUID } = require('../utils/errores');
+const { crearPermisoAnalisis, permisoAnalisisValido } = require('../utils/permisoAnalisis');
 
 // Atajo para cortar el flujo con un 400 y un código estable
 const errorValidacion = (mensaje, codigo) => new ErrorApp(mensaje, { status: 400, codigo });
+const tiemposEncuesta = new Set(['menos_5min', '5_15min', '15_30min', 'mas_30min']);
+
+const verificarPermiso = (registroId, permiso) => {
+  if (!permisoAnalisisValido(registroId, permiso)) {
+    throw new ErrorApp('El permiso de este análisis no es válido o venció. Vuelve a analizar el documento.', {
+      status: 403,
+      codigo: 'PERMISO_ANALISIS_INVALIDO',
+    });
+  }
+};
 
 /**
  * analizar — POST /api/documentos/analizar
@@ -22,6 +33,9 @@ const errorValidacion = (mensaje, codigo) => new ErrorApp(mensaje, { status: 400
  * 5. Devuelve el resultado al frontend para revisión del usuario (HITL)
  */
 const analizar = async (req, res, next) => {
+  const cancelacion = new AbortController();
+  const cancelar = () => cancelacion.abort();
+  res.once('close', cancelar);
   try {
     // Marca de tiempo de inicio para calcular el tiempo total de procesamiento
     const tiempoInicio = Date.now();
@@ -33,10 +47,12 @@ const analizar = async (req, res, next) => {
 
     // Paso 1: Extraer texto del documento mediante OCR
     // El buffer se usa aquí y se descarta al salir del scope
-    const textoExtraido = await ocrService.extraerTexto(buffer, mimeType);
+    const textoExtraido = await ocrService.extraerTexto(buffer, mimeType, cancelacion.signal);
+    if (cancelacion.signal.aborted) return;
 
     // Paso 2: Analizar el texto con Gemini para clasificar y sugerir respuesta
-    const analisis = await geminiService.analizarTexto(textoExtraido);
+    const analisis = await geminiService.analizarTexto(textoExtraido, cancelacion.signal);
+    if (cancelacion.signal.aborted) return;
 
     // Paso 3: Registrar metadatos de la sesión en Supabase (solo métricas, nunca contenido).
     // El procesamiento documental YA terminó con éxito: si el guardado falla no se
@@ -46,33 +62,34 @@ const analizar = async (req, res, next) => {
     let advertenciaGuardado = null;
     try {
       const { data } = await supabaseService.registrarUsoConRetorno({
-        tipo_documento: analisis.tipo || 'desconocido',
+        tipo_documento: analisis._categoria,
         tiempo_ms:      tiempoMs,
         confirmado:     false, // se actualiza a true cuando el usuario confirme (HITL)
       });
       registroId = data.id;
-    } catch (errorGuardado) {
-      console.error('[Supabase] El análisis terminó pero no se pudo guardar el registro de uso:', errorGuardado.message);
-      if (errorGuardado.causa) console.error('  Causa:', errorGuardado.causa.message || errorGuardado.causa);
+    } catch {
+      console.error('[Error 502] (PERSISTENCIA_FALLIDA)');
       advertenciaGuardado = 'No se pudo registrar la métrica de uso de este análisis. ' +
         'Podrás revisar y confirmar el resultado, pero la confirmación y la valoración no quedarán registradas.';
     }
 
     // Paso 4: Devolver el resultado al frontend.
     // El usuario DEBE revisar este resultado antes de cualquier acción final (HITL)
-    res.status(200).json({
+    res.set('Cache-Control', 'no-store').status(200).json({
       mensaje: advertenciaGuardado
         ? 'Documento analizado correctamente, pero el registro de uso no se guardó. Por favor revise el resultado.'
         : 'Documento analizado correctamente. Por favor revise el resultado.',
       datos:      analisis,
       registroId,
+      permisoAnalisis: crearPermisoAnalisis(registroId),
       registro: advertenciaGuardado
         ? { guardado: false, advertencia: advertenciaGuardado }
         : { guardado: true },
     });
   } catch (error) {
-    // Propagar el error al middleware de errores global
-    next(error);
+    if (!cancelacion.signal.aborted) next(error);
+  } finally {
+    res.off('close', cancelar);
   }
 };
 
@@ -87,19 +104,13 @@ const analizar = async (req, res, next) => {
  */
 const confirmar = async (req, res, next) => {
   try {
-    // Los datos del análisis aprobado llegan en el cuerpo de la petición.
-    // registroId viene del frontend para actualizar el registro de Supabase.
-    const { datos, registroId } = req.body || {};
-
-    // Validar que se recibió el análisis a confirmar
-    if (!datos) {
-      return next(errorValidacion('No se recibieron datos del análisis para confirmar.', 'DATOS_REQUERIDOS'));
-    }
+    const { registroId = null, permisoAnalisis } = req.body || {};
 
     // registroId es opcional (no existe si el guardado inicial falló), pero si llega debe ser válido
-    if (registroId && !esUUID(registroId)) {
+    if (registroId !== null && !esUUID(registroId)) {
       return next(errorValidacion('El identificador del registro no es válido.', 'REGISTRO_ID_INVALIDO'));
     }
+    verificarPermiso(registroId, permisoAnalisis);
 
     // Actualizar el registro en Supabase marcando confirmado = true.
     // Esto permite medir cuántos usuarios completaron el ciclo HITL completo.
@@ -110,14 +121,8 @@ const confirmar = async (req, res, next) => {
       registroActualizado = true;
     }
 
-    // No se registran datos del cliente (datos.tipo es controlable y permitiría falsear líneas del log)
-    console.log(`[HITL] Usuario confirmó un análisis (registro actualizado: ${registroActualizado})`);
-
-    // Devolver confirmación al frontend con los datos aprobados.
-    // `registroActualizado` indica si la confirmación quedó persistida.
     res.status(200).json({
       mensaje: 'Análisis confirmado correctamente por el usuario.',
-      datosConfirmados: datos,
       registroActualizado,
     });
   } catch (error) {
@@ -134,7 +139,7 @@ const confirmar = async (req, res, next) => {
  */
 const guardarEncuesta = async (req, res, next) => {
   try {
-    const { registroId, estrellas, tiempo_ahorrado, comentario } = req.body || {};
+    const { registroId, permisoAnalisis, estrellas, tiempo_ahorrado, comentario } = req.body || {};
 
     // Validar que se recibió un id de registro válido
     if (!registroId) {
@@ -143,16 +148,17 @@ const guardarEncuesta = async (req, res, next) => {
     if (!esUUID(registroId)) {
       return next(errorValidacion('El identificador del registro no es válido.', 'REGISTRO_ID_INVALIDO'));
     }
+    verificarPermiso(registroId, permisoAnalisis);
 
-    // Validar rango de estrellas si se envió (entero de 1 a 5)
-    if (estrellas !== undefined && (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5)) {
+    if (!Number.isInteger(estrellas) || estrellas < 1 || estrellas > 5) {
       return next(errorValidacion('La valoración debe estar entre 1 y 5 estrellas.', 'ESTRELLAS_INVALIDAS'));
     }
 
-    // Los campos de texto solo se aceptan como texto (o ausentes)
-    const textoValido = (valor) => valor === undefined || valor === null || typeof valor === 'string';
-    if (!textoValido(tiempo_ahorrado) || !textoValido(comentario)) {
-      return next(errorValidacion('Los campos de la encuesta deben ser texto.', 'ENCUESTA_INVALIDA'));
+    if (tiempo_ahorrado != null && !tiemposEncuesta.has(tiempo_ahorrado)) {
+      return next(errorValidacion('El rango de tiempo ahorrado no es válido.', 'ENCUESTA_INVALIDA'));
+    }
+    if (comentario != null && (typeof comentario !== 'string' || comentario.length > 200)) {
+      return next(errorValidacion('El comentario debe ser texto de hasta 200 caracteres.', 'ENCUESTA_INVALIDA'));
     }
 
     // Persistir la valoración en Supabase (lanza ErrorPersistencia o 404 si no se pudo)

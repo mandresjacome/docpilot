@@ -8,7 +8,7 @@
 // datos personales y el cliente guarda únicamente una bandera booleana en localStorage
 // ('docpilot_consentimiento_v1') para no mostrar el modal en cada visita del mismo navegador.
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 /**
  * ModalTratamientoDatos

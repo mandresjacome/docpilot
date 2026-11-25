@@ -7,7 +7,7 @@
 //   - Se revoca en el cleanup del useEffect para liberar memoria del navegador.
 //   - Esto garantiza que el archivo en RAM no quede referenciado indefinidamente.
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import ResultadoAnalisis from './ResultadoAnalisis';
 
 /**
@@ -20,7 +20,7 @@ import ResultadoAnalisis from './ResultadoAnalisis';
  */
 const VistaDividida = ({ archivo, resultado, onConfirmar, cargando, tiempoAnalisis }) => {
   // URL temporal en memoria del navegador para previsualizar el archivo
-  const [urlPreview, setUrlPreview] = useState(null);
+  const elementoPreview = useRef(null);
 
   // Determina si el tipo de archivo puede mostrarse en el navegador
   const esPDF = archivo?.type === 'application/pdf';
@@ -28,11 +28,10 @@ const VistaDividida = ({ archivo, resultado, onConfirmar, cargando, tiempoAnalis
   const esTIFF = archivo?.type === 'image/tiff';
 
   useEffect(() => {
-    // Generar la URL de previsualización solo si el archivo existe
-    if (!archivo) return;
-
+    const elemento = elementoPreview.current;
+    if (!archivo || !elemento) return;
     const url = URL.createObjectURL(archivo);
-    setUrlPreview(url);
+    elemento.src = url;
 
     // Cleanup: revocar la URL cuando el componente se desmonte o el archivo cambie.
     // Esto libera la referencia en memoria del navegador.
@@ -57,9 +56,9 @@ const VistaDividida = ({ archivo, resultado, onConfirmar, cargando, tiempoAnalis
 
         <div className="panel-preview">
           {/* PDF — se muestra en un iframe nativo del navegador */}
-          {esPDF && urlPreview && (
+          {esPDF && (
             <iframe
-              src={urlPreview}
+              ref={elementoPreview}
               title={`Previsualización: ${archivo.name}`}
               className="preview-iframe"
               aria-label="Previsualización del documento PDF"
@@ -67,10 +66,10 @@ const VistaDividida = ({ archivo, resultado, onConfirmar, cargando, tiempoAnalis
           )}
 
           {/* Imágenes (PNG, JPEG) — se muestran directamente */}
-          {esImagen && urlPreview && (
+          {esImagen && (
             <div className="preview-imagen-contenedor">
               <img
-                src={urlPreview}
+                ref={elementoPreview}
                 alt={`Previsualización: ${archivo.name}`}
                 className="preview-imagen"
               />
