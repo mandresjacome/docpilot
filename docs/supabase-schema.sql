@@ -9,7 +9,7 @@ create table if not exists public.registros_uso (
   id              uuid        primary key default gen_random_uuid(),
   fecha_hora      timestamptz not null default now(),
 
-  -- Etiqueta de tipo que devuelve Gemini (p. ej. "Factura de venta"). Es texto generado por la IA.
+  -- Categoría validada de DocPilot, p. ej. "factura". Los registros anteriores pueden usar etiquetas libres.
   tipo_documento  text        not null default 'desconocido',
 
   -- Milisegundos que tardó el ciclo OCR + análisis

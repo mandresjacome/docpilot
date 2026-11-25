@@ -1,5 +1,7 @@
 # Despliegue en Railway
 
+Esta guía describe la configuración de Railway conservada en el repositorio. Para instalar, ejecutar y verificar DocPilot en local, consulta el [README](../README.md).
+
 DocPilot se despliega como **un único servicio**: Express sirve la API y el frontend compilado desde el mismo origen. Esta guía usa Railway, pero cualquier plataforma que ejecute Node.js sirve igual.
 
 ```
@@ -27,11 +29,12 @@ git status
 
 ## 3. Variables de entorno
 
-Define en la pestaña **Variables** (descripción completa de cada una en el [README](../README.md#variables-de-entorno)):
+La pestaña **Variables** usa la misma configuración descrita en la [guía de ejecución local](../README.md#ejecutar-la-aplicación).
 
 | Variable | Valor |
 |----------|-------|
 | `NODE_ENV` | `production` (sirve el frontend compilado y desactiva CORS) |
+| `HOST` | `0.0.0.0` si se necesita recibir tráfico del proxy de la plataforma. El valor predeterminado escucha en loopback. |
 | `SUPABASE_URL` | URL de tu proyecto Supabase |
 | `SUPABASE_SERVICE_KEY` | Clave `service_role` |
 | `GEMINI_API_KEY` | API key de Gemini |
@@ -64,7 +67,7 @@ Ejecuta [supabase-schema.sql](supabase-schema.sql) en el SQL Editor de tu proyec
 En los logs de despliegue deben verse la instalación, el build de Vite y finalmente:
 
 ```
-Servidor backend corriendo en http://localhost:<puerto>
+Servidor backend escuchando en <dirección> (puerto <puerto>)
 ```
 
 Después:
@@ -89,4 +92,4 @@ Después:
 
 ## Desarrollo local
 
-Ver [README → Ejecución](../README.md#ejecución).
+Consulta la [guía de ejecución local](../README.md#ejecutar-la-aplicación).
