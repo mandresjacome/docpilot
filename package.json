@@ -14,21 +14,32 @@
     "frontend"
   ],
   "scripts": {
-    "install:all": "npm install --workspaces",
+    "install:all": "npm ci",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "start:backend": "npm run start --workspace=backend",
-    "test": "npm run test --workspace=backend",
+    "lint": "npm run lint --workspaces",
+    "test": "npm test --workspaces",
+    "test:backend": "npm test --workspace=backend",
+    "test:frontend": "npm test --workspace=frontend",
     "build:frontend": "npm run build --workspace=frontend",
     "build": "npm run build --workspace=frontend",
     "start": "node backend/server.js"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=24.15.0 <25",
+    "npm": "11.x"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0"
+  },
+  "overrides": {
+    "glob": "14.0.6",
+    "minimatch": "11.0.9"
   }
 }
